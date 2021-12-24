@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package proto.alt_pt;
+
+option go_package="github.com/synerex/proto_alt_pt";
+
+import "google/protobuf/timestamp.proto";
+
+message Point {
+    double lat = 1;     // 緯度 (EPSG:3857)
+    double lon = 2;     // 経度 (EPSG:3857)
+}
+
+// 障害情報 (通知)
+message DisabilityInfo {
+    enum Type {
+        BREAK_DOWN = 0;     // 故障
+        ACCIDENT = 1;       // 事故
+        DISASTER = 2;       // 自然災害
+    }
+    google.protobuf.Timestamp timestamp = 1;    // 発生時刻
+    Type type = 2;      // 障害種別
+    Point point = 3;    // 発生場所
+}
+
+// 障害情報 (応答)
+message DisabilityResponse {
+    enum Result {
+        SUCCESS = 0;    // 成功
+        FAILURE = 1;    // 失敗
+    }
+    google.protobuf.Timestamp timestamp = 1;    // 応答時刻
+    Result result = 2;  // 結果
+}
+
+// Dispatch要求 (Demand)
+message DispatchRequest {
+    google.protobuf.Timestamp timestamp = 1;    // 要求時刻
+    Point departure = 2;    // 乗車位置
+    Point arrival = 4;      // 降車位置
+    google.protobuf.Timestamp target_time = 6;  // 目標乗車時刻
+    string topic = 7;       // MQTT Topic
+}
+
+// Dispatch応答 (Supply)
+message DispatchResponse {
+    enum Result {
+        SUCCESS = 0;    // 配車完了
+        FAILURE = 1;    // 配車失敗
+    }
+    google.protobuf.Timestamp timestamp = 1;    // 応答時刻
+    Result result = 2;      // 配車結果
+    uint32 accept_no = 3;   // 受付番号
+    google.protobuf.Timestamp departure_time = 6;   // 乗車時刻
+    google.protobuf.Timestamp arrival_time = 7;     // 降車時刻
+    string topic = 8;
+}
+
+// 経路要求 (Demand)
+message RouteRequest {
+    google.protobuf.Timestamp timestamp = 1;    // 要求時刻
+    bytes task_id = 2;      // タスクID
+    uint32 vehicle_id = 3;  // 車両ID
+    Point current = 4;      // 現在地
+    uint32 lane_id = 5;     // レーンID
+}
+
+// 経路応答 (Supply)
+message RouteResponse {
+    google.protobuf.Timestamp timestamp = 1;    // 応答時刻
+    bytes task_id = 2;              // タスクID
+    Point destination = 3;          // 目的地
+    double altitude = 4;            // 高度
+    repeated uint32 lane_id = 5;    // レーンID (4 x 100)
+    repeated uint32 link_id = 6;    // リンクID (4 x 100)
+    repeated float velocity = 7;    // 速度 (4 x 100)
+    uint32 vehicle_id = 8;          // 車両ID
+}
+
+// 位置情報 (for 車両)
+message VehicleStatusRequest {
+    enum Status {
+        READY = 0;      // 待機中 (経路未割当)
+        RUNNING = 1;    // 走行中 (経路割当済)
+    }
+    google.protobuf.Timestamp timestamp = 1;    // 要求時刻
+    Status status = 2;      // 状態
+    bytes task_id = 3;      // タスクID
+    uint32 vehicle_id = 4;  // 車両ID
+    Point current = 5;      // 現在地
+    float velocity = 6;     // 速度 (km/h)
+    uint32 lane_id = 7;     // レーンID
+    float angle = 8;        // 角度 (CCW/East:0)
+}
+
+// 位置情報 (for ディスパッチャ)
+message VehicleStatusResponse {
+    enum Result {
+        COMPLETED = 0;
+        WATING = 1;
+    }
+    google.protobuf.Timestamp timestamp = 1;    // 応答時刻
+    bytes task_id = 2;      // タスクID
+    Result result = 3;      // 結果
+    uint32 vehicle_id = 4;  // 車両ID
+}

@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package disp_proto;
+
+option go_package="github.com/smart_dispatch/dispatch/proto";
+
+import "google/api/annotations.proto";
+
+service Dispatch {
+
+  rpc ProvideDeliveryPlan (DeliveryPlanningProvide) returns (DispatchResponse) {
+    option (google.api.http) = {
+      post: "/dispatch/provide"
+      body: "*"
+    };
+  }
+
+  rpc RequestVehicle (VehicleRequest) returns (DispatchResponse) {
+    option (google.api.http) = {
+      post: "/dispatch/request/vehicle"
+      body: "*"
+    };
+  }
+
+  rpc Confirm (VehiclePlanAdoption) returns (DispatchResponse) {
+    option (google.api.http) = {
+      post: "/dispatch/confirm"
+      body: "*"
+    };
+  }
+
+  rpc RequestElectricity (ElectricityCostSimulation) returns (DispatchResponse) {
+    option (google.api.http) = {
+      post: "/dispatch/request/electricity"
+      body: "*"
+    };
+  }
+}
+
+message PackageInfo {
+  uint64 package_id = 1;
+  string estimated_time_of_arrival = 2;
+}
+
+message DeliveryPlan {
+  uint64 delivery_plan_id = 1;
+  repeated PackageInfo packages_info = 2;
+}
+
+message ChargingPlan {
+  uint64 charging_plan_id = 1;
+  uint64 vehicle_id = 2;
+  uint64 charging_station_id = 3;
+  uint64 charger_id = 4;
+  uint32 charging_type = 5;
+  string start_time = 6;
+  string end_time = 7;
+}
+
+message ChargingPlans {
+  uint64 charging_plan_id = 1;
+}
+
+message RouteInfo {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message VehicleAssignate {
+ uint64 vehicle_id = 1;
+ uint64 delivery_plan_id = 2;
+ repeated ChargingPlans charging_plans = 3;
+ repeated RouteInfo route_info = 4;
+}
+
+message DeliveryPlanningProvide {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  uint64 module_id = 3;
+  string provide_id = 4;
+  repeated DeliveryPlan delivery_plan = 5;
+  repeated ChargingPlan charging_plan = 6;
+  repeated VehicleAssignate Vehicle_assignate = 7;
+}
+
+message VehicleRequest {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  uint64 number_of_vehicles = 3;
+}
+
+message VehiclePlanAdoption {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  uint64 module_id = 3;
+  string provide_id = 4;
+}
+
+message DispatchResponse {
+  uint32 result = 1;
+}
+
+message PointsNum {
+  string latitude = 1;
+  string longitude = 2;
+  string altitude = 3;
+}
+
+message ElectricityCostSimulation {
+  uint32 program_id = 1;
+  uint32 event_id = 2;
+  string time_stamp = 3;
+  string departure_time = 4;
+  repeated PointsNum points_num = 5;
+}

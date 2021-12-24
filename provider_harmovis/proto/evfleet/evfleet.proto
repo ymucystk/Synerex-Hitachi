@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package="github.com/smart_dispatch/evfleet/proto";
+
+import "google/api/annotations.proto";
+
+service EvFleet {
+
+  rpc NotifyFleetInfo (EvFleetSupply) returns (EvFleetResponse) {
+    option (google.api.http) = {
+      post: "/evfleet/notify"
+      body: "*"
+    };
+  }
+
+  rpc ProvideFleetInfo (VehicleList) returns (EvFleetResponse) {
+    option (google.api.http) = {
+      post: "/evfleet/provide"
+      body: "*"
+    };
+  }
+}
+
+message EvFleetSupply {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  uint64 vehicle_id = 3;
+  double latitude = 4;
+  double longitude = 5;
+  float soc = 6;
+  float soh = 7;
+  uint32 air_conditioner = 8;
+}
+
+message Vehicle {
+  uint64 vehicle_id = 1;
+  float soc = 2;
+  float soh = 3;
+  uint32 air_conditioner = 4;
+}
+
+message VehicleList {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  uint64 module_id = 3;
+  string provide_id = 4;
+  repeated Vehicle vehicle_list = 5;
+}
+
+message EvFleetResponse {
+  uint32 result = 1;
+}
+

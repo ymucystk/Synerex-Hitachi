@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package dp_proto;
+
+option go_package="github.com/smart_dispatch/delivery_planning/proto";
+
+import "google/api/annotations.proto";
+
+service DeliveryPlanning {
+
+  rpc RequestDeliveryPlan (DeliveryPlanningRequest) returns (DeliveryPlanningResponse) {
+    option (google.api.http) = {
+      post: "/deliveryplanning/request"
+      body: "*"
+    };
+  }
+
+  rpc SelectDeliveryPlan (DeliveryPlanAdoption) returns (DeliveryPlanningResponse) {
+    option (google.api.http) = {
+      post: "/deliveryplanning/select"
+      body: "*"
+    };
+  }
+}
+
+message TargetInfo {
+  uint64 max_vehicle_unit = 1;
+  string start_delivery_time = 2;
+  string end_delivery_time = 3;
+}
+
+message PackageInfo {
+  uint64 package_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  uint64 weight = 4;
+  uint32 delivery_time = 5;
+}
+
+message DeliveryInfo {
+  uint64 delivery_id = 1;
+  repeated PackageInfo packages_info = 2;
+}
+
+message DeliveryPlanningRequest {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  TargetInfo target_info = 3;
+  DeliveryInfo delivery_info = 4;
+}
+
+message DeliveryPlanAdoption {
+  uint32 event_id = 1;
+  string time_stamp = 2;
+  uint64 module_id = 3;
+  string provide_id = 4;
+}
+
+message DeliveryPlanningResponse {
+  uint32 result = 1;
+}
+
