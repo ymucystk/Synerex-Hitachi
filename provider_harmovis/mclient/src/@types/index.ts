@@ -93,6 +93,7 @@ export interface EvFleetSupply {    //車両のリアル位置＆情報（1秒�
     air_conditioner?: number,   //0:not use,1:use
     position?: [number,number,number],
     direction?: number,
+    text?: string,
 }
 
 export interface Vehicle {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArcLayer, PathLayer } from 'deck.gl';
+import { ArcLayer, PathLayer, TextLayer } from 'deck.gl';
 import { SimpleMeshLayer } from '@deck.gl/mesh-layers';
 import Axios from 'axios';
 import { xml2js } from 'xml-js';
@@ -724,7 +724,7 @@ class App extends Container<any,Partial<State>> {
 		}
 	}
 
-	getEvFleetSupply (json :EvFleetSupply):void {
+	getEvFleetSupply (json :Readonly<EvFleetSupply>):void {
 		console.log('getEvFleetSupply json=' + JSON.stringify(json));
 		if(json.event_id !== 9){
 			return
@@ -744,20 +744,26 @@ class App extends Container<any,Partial<State>> {
 					direction = degrees(atan2(sin(deltax), 
 						cos(y1) * tan(y2) - sin(y1) * cos(deltax))) % 360
 				}
-				this.evfleetsupply[i] = json
+				this.evfleetsupply[i] = {...json}
 				this.evfleetsupply[i].message = 'EvFleetSupply'
 				this.evfleetsupply[i].position = [json.longitude, json.latitude,0]
 				this.evfleetsupply[i].direction = direction
+				this.evfleetsupply[i].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
+				const air_conditioner = ((this.evfleetsupply[i].air_conditioner > 0) ? '1:use':'0:not use')
+				this.evfleetsupply[i].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+json.soh+'\nair_conditioner:'+air_conditioner
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
 			findIdx = this.evfleetsupply.length
-			this.evfleetsupply[findIdx] = json
+			this.evfleetsupply[findIdx] = {...json}
 			this.evfleetsupply[findIdx].message = 'EvFleetSupply'
 			this.evfleetsupply[findIdx].position = [json.longitude, json.latitude,0]
 			this.evfleetsupply[findIdx].direction = 0
+			this.evfleetsupply[findIdx].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
+			const air_conditioner = ((this.evfleetsupply[findIdx].air_conditioner > 0) ? '1:use':'0:not use')
+			this.evfleetsupply[findIdx].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+json.soh+'\nair_conditioner:'+air_conditioner
 		}
 		this.setVehicleId_Ev()
 	}
@@ -771,14 +777,14 @@ class App extends Container<any,Partial<State>> {
 		for (let i = 0, lengthi = this.vehiclelist.length; i < lengthi; i=(i+1)|0) {
 			if(json.module_id === this.vehiclelist[i].module_id &&
 				json.provide_id === this.vehiclelist[i].provide_id){
-				this.vehiclelist[i] = json
+				this.vehiclelist[i] = {...json}
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
 			findIdx = this.vehiclelist.length
-			this.vehiclelist[findIdx] = json
+			this.vehiclelist[findIdx] = {...json}
 		}
 	}
 
@@ -795,14 +801,14 @@ class App extends Container<any,Partial<State>> {
 		for (let i = 0, lengthi = this.deliveryplanningprovide.length; i < lengthi; i=(i+1)|0) {
 			if(json.module_id === this.deliveryplanningprovide[i].module_id &&
 				json.provide_id === this.deliveryplanningprovide[i].provide_id){
-					this.deliveryplanningprovide[i] = json
+					this.deliveryplanningprovide[i] = {...json}
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
 			findIdx = this.deliveryplanningprovide.length
-			this.deliveryplanningprovide[findIdx] = json
+			this.deliveryplanningprovide[findIdx] = {...json}
 		}
 		this.setModuleId()
 	}
@@ -816,7 +822,7 @@ class App extends Container<any,Partial<State>> {
 		if(json.event_id !== 1){
 			return
 		}
-		this.deliveryplanningrequest = json
+		this.deliveryplanningrequest = {...json}
 	}
 
 	getDeliveryPlanAdoption (json :DeliveryPlanAdoption):void {
@@ -828,14 +834,14 @@ class App extends Container<any,Partial<State>> {
 		for (let i = 0, lengthi = this.deliveryplanadoption.length; i < lengthi; i=(i+1)|0) {
 			if(json.module_id === this.deliveryplanadoption[i].module_id &&
 				json.provide_id === this.deliveryplanadoption[i].provide_id){
-				this.deliveryplanadoption[i] = json
+				this.deliveryplanadoption[i] = {...json}
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
 			findIdx = this.deliveryplanadoption.length
-			this.deliveryplanadoption[findIdx] = json
+			this.deliveryplanadoption[findIdx] = {...json}
 		}
 	}
 
@@ -1201,6 +1207,17 @@ class App extends Container<any,Partial<State>> {
 					pickable: true,
 					onHover,
 					onClick
+				} as any)
+			)
+			layers.push(
+				new TextLayer({
+					id: 'evfleetsupply-text-layer',
+					data,
+					getColor: (x:EvFleetSupply)=>ratecolor(x.soc),
+					getTextAnchor: 'start',
+					getSize: 15,
+					fontWeight: 100,
+					getPixelOffset: [20,-50]
 				} as any)
 			)
 		}
