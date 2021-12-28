@@ -8,9 +8,24 @@ import { ic_delete as icDelete } from 'react-icons-kit/md'
 import OsmInput from './xml-input'
 import MovesInput from './moves-input'
 import ChartComponent from './chartComponent'
-import TimelineComponent from './timelineComponent'
-import EvFleetSupplyChart from './EvFleetSupplyChart'
-import { EvFleetSupply } from '../@types'
+import { DeliveryPlanningRequest, DeliveryPlanAdoption } from '../@types'
+
+const stringToDate = (strDate:string)=>{
+  if(strDate.length === 14){
+    const year = parseInt(strDate.substring(0, 4))
+    const month = parseInt(strDate.substring(4, 6))-1
+    const date = parseInt(strDate.substring(6, 8))
+    const hour = parseInt(strDate.substring(8, 10))
+    const min = parseInt(strDate.substring(10, 12))
+    const sec = parseInt(strDate.substring(12, 14))
+    const dateObject = new Date(year, month, date, hour, min, sec)
+    return dateObject.toLocaleString('ja-JP', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short'
+    })
+  }
+  return ''
+}
 
 interface ControllerProps {
   deleteMovebase: any,
@@ -30,10 +45,23 @@ interface ControllerProps {
   ExtractedData: any,
   movesBaseLoad: Function,
   chartData: any,
-  data: any,
+	module_id:number,
+	provide_id:string,
   vehicle_id: number,
-  evfleetsupply: EvFleetSupply[]
-  getVehicleIdSelected: any, 
+  getModuleIdSelected: any, 
+  getProvideIdSelected: any, 
+  getVehicleIdSelected: any,
+	module_id_list:number[],
+  provide_id_list:string[],
+  vehicle_id_list: number[],
+  delivery_plan_id: number,
+  charging_plan_id: number,
+  delivery_plan_id_list: number[],
+  charging_plan_id_list: number[],
+  getDeliveryPlanIdSelected: any,
+  getChargingPlanIdSelected: any,
+  deliveryplanningrequest: DeliveryPlanningRequest,
+  deliveryplanadoption: DeliveryPlanAdoption[]
 }
 
 export default class Controller extends React.Component<ControllerProps, {}> {
@@ -59,10 +87,13 @@ export default class Controller extends React.Component<ControllerProps, {}> {
   }
 
   render () {
-    const { settime, timeBegin, leading, timeLength, actions,
-      secperhour, animatePause, animateReverse,
-      getMoveDataChecked, getMoveOptionChecked, vehicle_id, evfleetsupply,
-      inputFileName, viewport, getOsmData, chartData, data, getVehicleIdSelected } = this.props
+    const { settime, timeBegin, leading, timeLength, actions, secperhour, animatePause, animateReverse,
+      getMoveDataChecked, getMoveOptionChecked, module_id, provide_id, vehicle_id,
+      module_id_list, provide_id_list, vehicle_id_list, inputFileName, viewport, getOsmData, chartData,
+      getModuleIdSelected, getProvideIdSelected, getVehicleIdSelected,
+      delivery_plan_id, charging_plan_id, delivery_plan_id_list, charging_plan_id_list,
+      getDeliveryPlanIdSelected, getChargingPlanIdSelected, deliveryplanningrequest, deliveryplanadoption
+    } = this.props
 
     const { movesFileName, osmDataFileName } = inputFileName
 
@@ -152,24 +183,68 @@ export default class Controller extends React.Component<ControllerProps, {}> {
                 </button>
               </div>
             </li>:null}
-            {evfleetsupply.length > 0?
+            {deliveryplanningrequest && deliveryplanningrequest.target_info ?<>
+            <li>
+              <p>最大車両:{deliveryplanningrequest.target_info.max_vehicle_unit}</p>
+              <p>配送開始:{stringToDate(deliveryplanningrequest.target_info.start_delivery_time)}</p>
+              <p>配送終了:{stringToDate(deliveryplanningrequest.target_info.end_delivery_time)}</p>
+            </li>
+            </>:null}
+            {deliveryplanningrequest && deliveryplanningrequest.delivery_info ?<>
+            <li>
+              <p>配送パッケージ数:{deliveryplanningrequest.delivery_info.packages_info.length}</p>
+            </li>
+            </>:null}
+            {module_id_list.length > 0?
+            <li>
+              <div className="form-select" title='Dispatcher識別(module_id)選択'>
+                <label htmlFor="ModuleIdSelect" className="form-select-label">Dispatcher識別(module_id)選択</label>
+                <select id="ModuleIdSelect" value={module_id} onChange={getModuleIdSelected} >
+                {module_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                </select>
+              </div>
+            </li>:null}
+            {provide_id_list.length > 0?
+            <li>
+              <div className="form-select" title='配送計画(provide_id)選択'>
+                <label htmlFor="ProvideIdSelect" className="form-select-label">配送計画(provide_id)選択</label>
+                <select id="ProvideIdSelect" value={provide_id} onChange={getProvideIdSelected} >
+                {provide_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                </select>
+              </div>
+            </li>:null}
+            {(module_id_list.length > 0 && provide_id_list.length > 0)?<>
+              <li>
+                <p>配送計画採用状況:{deliveryplanadoption.findIndex(x=>x.module_id === module_id && x.provide_id === provide_id) < 0?'未採用':'採用'}</p>
+              </li>
+            </>:null}
+            {vehicle_id_list.length > 0?
             <li>
               <div className="form-select" title='車両(vehicle_id)選択'>
                 <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
                 <select id="VehicleIdSelect" value={vehicle_id} onChange={getVehicleIdSelected} >
-                {evfleetsupply.map(x=><option value={x.vehicle_id} key={x.vehicle_id}>{x.vehicle_id}</option>)}
+                {vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
                 </select>
               </div>
             </li>:null}
-          </ul>
-        </div>
-      </div>
-      <div className='harmovis_gauge'>
-        <div className='container'>
-          <ul className='list-group'>
+            {delivery_plan_id_list.length > 0?
             <li>
-              <EvFleetSupplyChart vehicle_id={vehicle_id} evfleetsupply={evfleetsupply} />
-            </li>
+              <div className="form-select" title='配送計画ID(delivery_plan_id)選択'>
+                <label htmlFor="deliveryPlanIdSelect" className="form-select-label">配送計画ID(delivery_plan_id)選択</label>
+                <select id="deliveryPlanIdSelect" value={delivery_plan_id} onChange={getDeliveryPlanIdSelected} >
+                {delivery_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                </select>
+              </div>
+            </li>:null}
+            {charging_plan_id_list.length > 0?
+            <li>
+              <div className="form-select" title='充電計画ID(charging_plan_id)選択'>
+                <label htmlFor="chargingPlanIdSelect" className="form-select-label">充電計画ID(charging_plan_id)選択</label>
+                <select id="chargingPlanIdSelect" value={charging_plan_id} onChange={getChargingPlanIdSelected} >
+                {charging_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                </select>
+              </div>
+            </li>:null}
           </ul>
         </div>
       </div>
@@ -178,15 +253,6 @@ export default class Controller extends React.Component<ControllerProps, {}> {
           <ul className='list-group'>
             <li>
               <ChartComponent chartData={chartData} />
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div className='harmovis_schedule'>
-        <div className='container'>
-          <ul className='list-group'>
-            <li>
-              <TimelineComponent data={data} />
             </li>
           </ul>
         </div>

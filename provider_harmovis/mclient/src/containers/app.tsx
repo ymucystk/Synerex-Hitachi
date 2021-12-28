@@ -7,8 +7,10 @@ import { Container, connectToHarmowareVis, HarmoVisLayers,
 	MovesLayer, DepotsLayer, LineMapLayer,
 	LoadingIcon, FpsDisplay, EventInfo, Movesbase } from 'harmoware-vis'
 import Controller from '../components/controller'
-import { EvFleetSupply, VehicleList, DeliveryPlanningProvide,
-	DeliveryPlanningRequest, DeliveryPlanAdoption } from '../@types'
+import EvFleetSupplyChart from '../components/EvFleetSupplyChart'
+import DeliveryPlanTimeline from '../components/deliveryPlanTimeline'
+import { EvFleetSupply, VehicleList, DeliveryPlanningProvide, ChargingPlans,
+	DeliveryPlanningRequest, DeliveryPlanAdoption, PackagePlan, ChargingPlan } from '../@types'
 
 // for objMap.
 import {registerLoaders} from '@loaders.gl/core';
@@ -22,6 +24,13 @@ const {PI:pi,min,max,abs,sin,cos,tan,atan2} = Math;
 const radians = (degree: number) => degree * pi / 180;
 const degrees = (radian: number) => radian * 180 / pi;
 
+interface PathData { path:number[][], color?:number[], width?:number,
+	vehicle_id:number, delivery_plan_id:number, message:string, charging_plans?: ChargingPlans[], }
+
+const delivery_time_table:string[] = [
+	'0 :','1 : 09:00 - 12:00','2 : 14:00 - 18:00','3 : 18:00 - 21:00'
+]
+
 export interface State {
 	moveDataVisible: boolean,
 	moveOptionVisible: boolean,
@@ -33,13 +42,6 @@ export interface State {
 	popup: [number, number, string],
 	osm_data: object,
 	chartData: object,
-	data: object,
-	vehicle_id: number,
-	evfleetsupply: EvFleetSupply[],
-	deliveryplanningrequest: DeliveryPlanningRequest,
-	vehiclelist: VehicleList[],
-	deliveryplanadoption: DeliveryPlanAdoption[]
-	deliveryplanningprovide: DeliveryPlanningProvide[]
 };
   
 class App extends Container<any,Partial<State>> {
@@ -111,17 +113,286 @@ class App extends Container<any,Partial<State>> {
 			popup: [0, 0, ''],
 			osm_data: {},
 			chartData: undefined,
-			vehicle_id: undefined,
-			evfleetsupply: [],
-			deliveryplanningrequest: {},
-			vehiclelist: [],
-			deliveryplanadoption: [],
-			deliveryplanningprovide: []
 		}
-		this.movesbase = [];
+		this.movesbase = []
+		this.module_id = undefined
+		this.provide_id = undefined
+		this.vehicle_id = undefined
+		this.delivery_plan_id = undefined
+		this.charging_plan_id = undefined
+		this.module_id_list = []
+		this.provide_id_list = []
+		this.vehicle_id_list = []
+		this.delivery_plan_id_list = []
+		this.packages_info_list = []
+		this.charging_plan_id_list = []
+		this.charging_plan_list = []
+		this.evfleetsupply = []
+		this.deliveryplanningrequest = undefined
+		this.vehiclelist = []
+		this.deliveryplanadoption = []
+		this.deliveryplanningprovide = []
 	}
-	movesbase:any[];
-	canvas: HTMLCanvasElement;
+	movesbase:any[]
+	canvas: HTMLCanvasElement
+	module_id:number
+	provide_id:string
+	vehicle_id: number
+	delivery_plan_id: number
+	charging_plan_id: number
+	module_id_list: number[]
+	provide_id_list: string[]
+	vehicle_id_list: number[]
+	delivery_plan_id_list: number[]
+	packages_info_list: PackagePlan[]
+	charging_plan_id_list: number[]
+	charging_plan_list:ChargingPlan[]
+	evfleetsupply: EvFleetSupply[]
+	deliveryplanningrequest: DeliveryPlanningRequest
+	vehiclelist: VehicleList[]
+	deliveryplanadoption: DeliveryPlanAdoption[]
+	deliveryplanningprovide: DeliveryPlanningProvide[]
+
+	setModuleId (module_id?:Readonly<number>):void {
+		if(this.deliveryplanningprovide.length > 0){
+			const module_id_list:number[] = []
+			for (const element of this.deliveryplanningprovide){
+				if(module_id_list.findIndex(x=>x === element.module_id) < 0){
+					module_id_list.push(element.module_id)
+				}
+			}
+			module_id_list.sort((a, b) => (a - b))
+			this.module_id_list = module_id_list
+			if(module_id === undefined){
+				if(this.module_id === undefined){
+					this.module_id = module_id_list[0]
+				}else{
+					if(module_id_list.findIndex(x=>x === this.module_id) < 0){
+						this.module_id = module_id_list[0]
+					}	
+				}
+			}else{
+				if(module_id_list.findIndex(x=>x === module_id) < 0){
+					if(this.module_id === undefined){
+						this.module_id = module_id_list[0]
+					}
+				}else{
+					this.module_id = module_id
+				}
+			}
+			this.setProvideId()
+		}
+	}
+	setProvideId (provide_id?:Readonly<string>):void {
+		if(this.deliveryplanningprovide.length > 0){
+			const filter_list = this.deliveryplanningprovide.filter(x=>x.module_id === this.module_id)
+			if(filter_list.length > 0){
+				const provide_id_list:string[] = []
+				for (const element of filter_list){
+					if(provide_id_list.findIndex(x=>x === element.provide_id) < 0){
+						provide_id_list.push(element.provide_id)
+					}
+				}
+				provide_id_list.sort()
+				this.provide_id_list = provide_id_list
+				if(provide_id === undefined){
+					if(this.provide_id === undefined){
+						this.provide_id = provide_id_list[0]
+					}else{
+						if(provide_id_list.findIndex(x=>x === this.provide_id) < 0){
+							this.provide_id = provide_id_list[0]
+						}
+					}
+				}else{
+					if(provide_id_list.findIndex(x=>x === provide_id) < 0){
+						if(this.provide_id === undefined){
+							this.provide_id = provide_id_list[0]
+						}
+					}else{
+						this.provide_id = provide_id
+					}
+				}
+			}
+			this.setVehicleId()
+		}
+	}
+	setVehicleId (vehicle_id?:Readonly<number>):void {
+		if(this.deliveryplanningprovide.length > 0){
+			const filter_list = this.deliveryplanningprovide.filter(
+				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+			if(filter_list.length > 0){
+				const vehicle_id_list:number[] = []
+				for (const element1 of filter_list){
+					for (const element2 of element1.Vehicle_assignate){
+						if(vehicle_id_list.findIndex(x=>x === element2.vehicle_id) < 0){
+							vehicle_id_list.push(element2.vehicle_id)
+						}
+					}
+				}
+				this.mergeVehicleId(vehicle_id_list)
+				if(vehicle_id === undefined){
+					if(this.vehicle_id === undefined){
+						this.vehicle_id = vehicle_id_list[0]
+					}else{
+						if(this.vehicle_id_list.findIndex(x=>x === this.vehicle_id) < 0){
+							this.vehicle_id = vehicle_id_list[0]
+						}
+					}
+				}else{
+					if(this.vehicle_id_list.findIndex(x=>x === vehicle_id) < 0){
+						if(this.vehicle_id === undefined){
+							this.vehicle_id = vehicle_id_list[0]
+						}
+					}else{
+						this.vehicle_id = vehicle_id
+					}
+				}
+			}
+			this.setDeliveryPlanId()
+		}else{
+			if(vehicle_id !== undefined){
+				this.setVehicleId_Ev(vehicle_id)
+			}
+		}
+	}
+	setVehicleId_Ev (vehicle_id?:Readonly<number>):void {
+		if(this.evfleetsupply.length > 0){
+			const vehicle_id_list:number[] = []
+			for (const element of this.evfleetsupply){
+				if(vehicle_id_list.findIndex(x=>x === element.vehicle_id) < 0){
+					vehicle_id_list.push(element.vehicle_id)
+				}
+			}
+			this.mergeVehicleId(vehicle_id_list)
+			if(vehicle_id === undefined){
+				if(this.vehicle_id === undefined){
+					this.vehicle_id = vehicle_id_list[0]
+				}else{
+					if(this.vehicle_id_list.findIndex(x=>x === this.vehicle_id) < 0){
+						this.vehicle_id = vehicle_id_list[0]
+					}
+				}
+			}else{
+				if(this.vehicle_id_list.findIndex(x=>x === vehicle_id) < 0){
+					if(this.vehicle_id === undefined){
+						this.vehicle_id = vehicle_id_list[0]
+					}
+				}else{
+					this.vehicle_id = vehicle_id
+				}
+			}
+			this.setDeliveryPlanId()
+		}
+	}
+	mergeVehicleId (vehicle_id_list:number[]):void {
+		const set_vehicle_id_list:number[] = [...this.vehicle_id_list]
+		for (const set_vehicle_id of vehicle_id_list){
+			if(set_vehicle_id_list.findIndex(x=>x === set_vehicle_id) <0){
+				set_vehicle_id_list.push(set_vehicle_id)
+			}
+		}
+		set_vehicle_id_list.sort((a, b) => (a - b))
+		this.vehicle_id_list = set_vehicle_id_list
+	}
+	setDeliveryPlanId (delivery_plan_id?:Readonly<number>):void {
+		if(this.deliveryplanningprovide.length > 0){
+			const filter_list = this.deliveryplanningprovide.filter(
+				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+			if(filter_list.length > 0){
+				const delivery_plan_id_list:number[] = []
+				for (const element1 of filter_list){
+					const { Vehicle_assignate } = element1
+					const select_vehicle_id = Vehicle_assignate.filter(x=>x.vehicle_id === this.vehicle_id)
+					for (const element2 of select_vehicle_id){
+						if(delivery_plan_id_list.findIndex(x=>x === element2.delivery_plan_id) < 0){
+							delivery_plan_id_list.push(element2.delivery_plan_id)
+						}
+					}
+				}
+				delivery_plan_id_list.sort((a, b) => (a - b))
+				this.delivery_plan_id_list = delivery_plan_id_list
+				if(delivery_plan_id === undefined){
+					if(this.delivery_plan_id === undefined){
+						this.delivery_plan_id = delivery_plan_id_list[0]
+					}else{
+						if(delivery_plan_id_list.findIndex(x=>x === this.delivery_plan_id) < 0){
+							this.delivery_plan_id = delivery_plan_id_list[0]
+						}	
+					}
+				}else{
+					if(delivery_plan_id_list.findIndex(x=>x === delivery_plan_id) < 0){
+						if(this.delivery_plan_id === undefined){
+							this.delivery_plan_id = delivery_plan_id_list[0]
+						}
+					}else{
+						this.delivery_plan_id = delivery_plan_id
+					}
+				}
+				const packages_info_list:PackagePlan[] = []
+				for (const element1 of filter_list){
+					for (const element2 of element1.delivery_plan){
+						if(element2.delivery_plan_id === this.delivery_plan_id){
+							for (const element3 of element2.packages_info){
+								packages_info_list.push(element3)
+							}
+						}
+					}
+				}
+				this.packages_info_list = packages_info_list
+			}
+			this.setChargingPlanId()
+		}
+	}
+	setChargingPlanId (charging_plan_id?:Readonly<number>):void {
+		if(this.deliveryplanningprovide.length > 0){
+			const filter_list = this.deliveryplanningprovide.filter(
+				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+			if(filter_list.length > 0){
+				const charging_plan_id_list:number[] = []
+				for (const element1 of filter_list){
+					const { Vehicle_assignate } = element1
+					const select_vehicle_id = Vehicle_assignate.filter(x=>x.vehicle_id === this.vehicle_id)
+					for (const element2 of select_vehicle_id){
+						for (const element3 of element2.charging_plans){
+							if(charging_plan_id_list.findIndex(x=>x === element3.charging_plan_id) < 0){
+								charging_plan_id_list.push(element3.charging_plan_id)
+							}
+						}
+					}
+				}
+				charging_plan_id_list.sort((a, b) => (a - b))
+				this.charging_plan_id_list = charging_plan_id_list
+				if(charging_plan_id === undefined){
+					if(this.charging_plan_id === undefined){
+						this.charging_plan_id = charging_plan_id_list[0]
+					}else{
+						if(charging_plan_id_list.findIndex(x=>x === this.charging_plan_id) < 0){
+							this.charging_plan_id = charging_plan_id_list[0]
+						}	
+					}
+				}else{
+					if(charging_plan_id_list.findIndex(x=>x === charging_plan_id) < 0){
+						if(this.charging_plan_id === undefined){
+							this.charging_plan_id = charging_plan_id_list[0]
+						}
+					}else{
+						this.charging_plan_id = charging_plan_id
+					}
+				}
+				const charging_plan_list:ChargingPlan[] = []
+				for (const element1 of filter_list){
+					const { charging_plan } = element1
+					const select_vehicle_id = charging_plan.filter(x=>x.vehicle_id === this.vehicle_id)
+					for (const element2 of select_vehicle_id){
+						if(element2.charging_plan_id === this.charging_plan_id){
+							charging_plan_list.push(element2)
+						}
+					}
+				}
+				this.charging_plan_list = charging_plan_list
+			}
+		}
+	}
 
 	getPoint (json :any):void {
 		console.log('getPoint json=' + JSON.stringify(json));
@@ -459,41 +730,36 @@ class App extends Container<any,Partial<State>> {
 			return
 		}
 		let findIdx = -1;
-		const evfleetsupply = this.state.evfleetsupply
-		const firstTime = (evfleetsupply.length === 0)
-		for (let i = 0, lengthi = evfleetsupply.length; i < lengthi; i=(i+1)|0) {
-			if(json.vehicle_id === evfleetsupply[i].vehicle_id){
+		for (let i = 0, lengthi = this.evfleetsupply.length; i < lengthi; i=(i+1)|0) {
+			if(json.vehicle_id === this.evfleetsupply[i].vehicle_id){
 				let direction = 0
-				if(evfleetsupply[i].position[0] === json.longitude && evfleetsupply[i].position[1] === json.latitude){
-					direction = evfleetsupply[i].direction
+				if(this.evfleetsupply[i].position[0] === json.longitude && this.evfleetsupply[i].position[1] === json.latitude){
+					direction = this.evfleetsupply[i].direction
 				}else{
-					const x1 = radians(evfleetsupply[i].position[0])
-					const y1 = radians(evfleetsupply[i].position[1])
+					const x1 = radians(this.evfleetsupply[i].position[0])
+					const y1 = radians(this.evfleetsupply[i].position[1])
 					const x2 = radians(json.longitude)
 					const y2 = radians(json.latitude)
 					const deltax = x2 - x1
 					direction = degrees(atan2(sin(deltax), 
 						cos(y1) * tan(y2) - sin(y1) * cos(deltax))) % 360
 				}
-				evfleetsupply[i] = json
-				evfleetsupply[i].message = 'EvFleetSupply'
-				evfleetsupply[i].position = [json.longitude, json.latitude,0]
-				evfleetsupply[i].direction = direction
+				this.evfleetsupply[i] = json
+				this.evfleetsupply[i].message = 'EvFleetSupply'
+				this.evfleetsupply[i].position = [json.longitude, json.latitude,0]
+				this.evfleetsupply[i].direction = direction
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
-			findIdx = evfleetsupply.length
-			evfleetsupply[findIdx] = json
-			evfleetsupply[findIdx].message = 'EvFleetSupply'
-			evfleetsupply[findIdx].position = [json.longitude, json.latitude,0]
-			evfleetsupply[findIdx].direction = 0
-			if(firstTime){
-				this.setState({vehicle_id:json.vehicle_id})
-			}
+			findIdx = this.evfleetsupply.length
+			this.evfleetsupply[findIdx] = json
+			this.evfleetsupply[findIdx].message = 'EvFleetSupply'
+			this.evfleetsupply[findIdx].position = [json.longitude, json.latitude,0]
+			this.evfleetsupply[findIdx].direction = 0
 		}
-		this.setState({evfleetsupply})
+		this.setVehicleId_Ev()
 	}
 
 	getVehicleList (json :VehicleList):void {
@@ -502,20 +768,18 @@ class App extends Container<any,Partial<State>> {
 			return
 		}
 		let findIdx = -1;
-		const vehiclelist = this.state.vehiclelist
-		for (let i = 0, lengthi = vehiclelist.length; i < lengthi; i=(i+1)|0) {
-			if(json.module_id === vehiclelist[i].module_id &&
-				json.provide_id === vehiclelist[i].provide_id){
-				vehiclelist[i] = json
+		for (let i = 0, lengthi = this.vehiclelist.length; i < lengthi; i=(i+1)|0) {
+			if(json.module_id === this.vehiclelist[i].module_id &&
+				json.provide_id === this.vehiclelist[i].provide_id){
+				this.vehiclelist[i] = json
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
-			findIdx = vehiclelist.length
-			vehiclelist[findIdx] = json
+			findIdx = this.vehiclelist.length
+			this.vehiclelist[findIdx] = json
 		}
-		this.setState({vehiclelist})
 	}
 
 	getEvFleetResponse (json :any):void {
@@ -528,20 +792,19 @@ class App extends Container<any,Partial<State>> {
 			return
 		}
 		let findIdx = -1;
-		const deliveryplanningprovide = this.state.deliveryplanningprovide
-		for (let i = 0, lengthi = deliveryplanningprovide.length; i < lengthi; i=(i+1)|0) {
-			if(json.module_id === deliveryplanningprovide[i].module_id &&
-				json.provide_id === deliveryplanningprovide[i].provide_id){
-				deliveryplanningprovide[i] = json
+		for (let i = 0, lengthi = this.deliveryplanningprovide.length; i < lengthi; i=(i+1)|0) {
+			if(json.module_id === this.deliveryplanningprovide[i].module_id &&
+				json.provide_id === this.deliveryplanningprovide[i].provide_id){
+					this.deliveryplanningprovide[i] = json
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
-			findIdx = deliveryplanningprovide.length
-			deliveryplanningprovide[findIdx] = json
+			findIdx = this.deliveryplanningprovide.length
+			this.deliveryplanningprovide[findIdx] = json
 		}
-		this.setState({deliveryplanningprovide})
+		this.setModuleId()
 	}
 
 	getDispDispatchResponse (json :any):void {
@@ -553,8 +816,7 @@ class App extends Container<any,Partial<State>> {
 		if(json.event_id !== 1){
 			return
 		}
-		const {deliveryplanningrequest} = this.state
-		this.setState({deliveryplanningrequest})
+		this.deliveryplanningrequest = json
 	}
 
 	getDeliveryPlanAdoption (json :DeliveryPlanAdoption):void {
@@ -563,20 +825,18 @@ class App extends Container<any,Partial<State>> {
 			return
 		}
 		let findIdx = -1;
-		const deliveryplanadoption = this.state.deliveryplanadoption
-		for (let i = 0, lengthi = deliveryplanadoption.length; i < lengthi; i=(i+1)|0) {
-			if(json.module_id === deliveryplanadoption[i].module_id &&
-				json.provide_id === deliveryplanadoption[i].provide_id){
-				deliveryplanadoption[i] = json
+		for (let i = 0, lengthi = this.deliveryplanadoption.length; i < lengthi; i=(i+1)|0) {
+			if(json.module_id === this.deliveryplanadoption[i].module_id &&
+				json.provide_id === this.deliveryplanadoption[i].provide_id){
+				this.deliveryplanadoption[i] = json
 				findIdx = i
 				break
 			}
 		}
 		if(findIdx < 0){
-			findIdx = deliveryplanadoption.length
-			deliveryplanadoption[findIdx] = json
+			findIdx = this.deliveryplanadoption.length
+			this.deliveryplanadoption[findIdx] = json
 		}
-		this.setState({deliveryplanadoption})
 	}
 
 	getDeliveryPlanningResponse (json :any):void {
@@ -605,8 +865,30 @@ class App extends Container<any,Partial<State>> {
 		this.setState({ moveOptionVisible: e.target.checked })
 	}
 
+	getModuleIdSelected (e :any):void {
+		if(this.module_id != +e.target.value){
+			this.setModuleId(+e.target.value)
+		}
+	}
+	getProvideIdSelected (e :any):void {
+		if(this.provide_id != e.target.value){
+			this.setProvideId(e.target.value);
+		}
+	}
 	getVehicleIdSelected (e :any):void {
-		this.setState({ vehicle_id: +e.target.value });
+		if(this.vehicle_id != +e.target.value){
+			this.setVehicleId(+e.target.value);
+		}
+	}
+	getDeliveryPlanIdSelected (e :any):void {
+		if(this.delivery_plan_id != +e.target.value){
+			this.setDeliveryPlanId(+e.target.value);
+		}
+	}
+	getChargingPlanIdSelected (e :any):void {
+		if(this.charging_plan_id != +e.target.value){
+			this.setChargingPlanId(+e.target.value);
+		}
 	}
 
 	getOsmData (osm_data :any):void {
@@ -666,7 +948,8 @@ class App extends Container<any,Partial<State>> {
 
 	componentDidMount():void{
 		super.componentDidMount();
-		this.props.actions.setViewport({longitude: 139.480688476582, latitude: 35.70031666548001, zoom: 15.0, pitch: 45})
+		this.props.actions.setDefaultViewport({defaultZoom: 14.0, defaultPitch: 45})
+		this.props.actions.setViewport({longitude: 139.59955047063917, latitude: 35.44913331507205, zoom: 14.0, pitch: 45})
 		Axios.get<string>(osmPath).then(res=>{
 			const readdata = xml2js(res.data,{compact: true}) as {osm?:any};
 			if(readdata.osm.way && readdata.osm.node){
@@ -689,21 +972,93 @@ class App extends Container<any,Partial<State>> {
 			const {actions,timeLength} = this.props
 			actions.setTimeLength(timeLength+60);
 			actions.setNoLoop(true)
+			actions.setTime(Date.now()/1000)
 		}
 	}
 
 	onHover(el: EventInfo):void{
 		if (el && el.object) {
-		  let disptext = '';
-		  const objctlist = Object.entries(el.object);
-		  for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
-			const strvalue = objctlist[i][1].toString();
-			disptext = disptext + (i > 0 ? '\n' : '');
-			disptext = disptext + (`${objctlist[i][0]}: ${strvalue}`);
-		  }
-		  this.setState({ popup: [el.x, el.y, disptext] });
+			const {message}:any = el.object
+			let disptext = '';
+			if(message === 'EvFleetSupply'){
+				const objctlist:[string, any][] = Object.entries(el.object);
+				for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
+					let name:string = ''
+					let value:string = ''
+					if(objctlist[i][0] === 'vehicle_id'){
+						name = '車両ID(vehicle_id)'
+						value = objctlist[i][1].toString()
+					}else
+					if(objctlist[i][0] === 'soc'){
+						name = 'バッテリー充電率(soc)'
+						value = objctlist[i][1].toString()+'(%)'
+					}else
+					if(objctlist[i][0] === 'soh'){
+						name = 'バッテリー劣化率(soh)'
+						value = objctlist[i][1].toString()+'(%)'
+					}else
+					if(objctlist[i][0] === 'air_conditioner'){
+						name = 'エアコン(air_conditioner)'
+						value = objctlist[i][1] >= 1 ? '1 : 使用(use)':'0 : 未使用(not use)'
+					}
+					if(name.length > 0){
+						disptext = disptext + (i > 0 ? '\n' : '');
+						disptext = disptext + (`${name} : ${value}`);
+					}
+				}
+			}else
+			if(message === 'VehicleRouteLayer'){
+				const objctlist:[string, any][] = Object.entries(el.object);
+				for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
+					let name:string = ''
+					let value:string = ''
+					if(objctlist[i][0] === 'vehicle_id'){
+						name = '車両ID(vehicle_id)'
+						value = objctlist[i][1].toString()
+					}else
+					if(objctlist[i][0] === 'delivery_plan_id'){
+						name = '配送計画ID(delivery_plan_id)'
+						value = objctlist[i][1].toString()
+					}
+					if(name.length > 0){
+						disptext = disptext + (i > 0 ? '\n' : '');
+						disptext = disptext + (`${name} : ${value}`);
+					}
+				}
+			}else
+			if(message === 'DeliveryPlanningRequest'){
+				const objctlist:[string, any][] = Object.entries(el.object);
+				for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
+					let name:string = ''
+					let value:string = ''
+					if(objctlist[i][0] === 'package_id'){
+						name = 'パッケージID'
+						value = objctlist[i][1].toString()
+					}else
+					if(objctlist[i][0] === 'weight'){
+						name = '重量'
+						value = objctlist[i][1].toString()+'(kg)'
+					}else
+					if(objctlist[i][0] === 'delivery_time'){
+						name = '配送希望時間'
+						value = objctlist[i][1]
+					}
+					if(name.length > 0){
+						disptext = disptext + (i > 0 ? '\n' : '');
+						disptext = disptext + (`${name} : ${value}`);
+					}
+				}
+			}else{
+				const objctlist = Object.entries(el.object);
+				for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
+					const strvalue = objctlist[i][1].toString();
+					disptext = disptext + (i > 0 ? '\n' : '');
+					disptext = disptext + (`${objctlist[i][0]}: ${strvalue}`);
+				}
+			}
+			this.setState({ popup: [el.x, el.y, disptext] });
 		} else {
-		  this.setState({ popup: [0, 0, ''] });
+			this.setState({ popup: [0, 0, ''] });
 		}
 	}
 
@@ -718,15 +1073,13 @@ class App extends Container<any,Partial<State>> {
 
 			}else
 			if(message === 'DispatchRequest'){
-				this.setState({chartData:undefined})
-				this.setState({data:undefined})
 
 			}else
 			if(message === 'DispatchResponse'){
 
 			}else
 			if(message === 'RouteRequest'){
-				this.setState({chartData:{
+/*				this.setState({chartData:{
 					type: 'bar',
 					data: {
 					  labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -745,45 +1098,7 @@ class App extends Container<any,Partial<State>> {
 					options:{
 						indexAxis: 'y',
 					}
-				}})
-				this.setState({data:[
-					  [
-						'Magnolia Room1',
-						'Beginning JavaScript',
-						new Date(0, 0, 0, 10, 0, 0),
-						new Date(0, 0, 0, 13, 30, 0),
-					  ],
-					  [
-						'Magnolia Room2',
-						'Intermediate JavaScript',
-						new Date(0, 0, 0, 14, 0, 0),
-						new Date(0, 0, 0, 15, 30, 0),
-					  ],
-					  [
-						'Magnolia Room3',
-						'Advanced JavaScript',
-						new Date(0, 0, 0, 16, 0, 0),
-						new Date(0, 0, 0, 17, 30, 0),
-					  ],
-					  [
-						'Willow Room',
-						'Beginning Google Charts',
-						new Date(0, 0, 0, 12, 30, 0),
-						new Date(0, 0, 0, 14, 0, 0),
-					  ],
-					  [
-						'Willow Room',
-						'Intermediate Google Charts',
-						new Date(0, 0, 0, 14, 30, 0),
-						new Date(0, 0, 0, 16, 0, 0),
-					  ],
-					  [
-						'Willow Room2',
-						'Advanced Google Charts',
-						new Date(0, 0, 0, 16, 30, 0),
-						new Date(0, 0, 0, 20, 0, 0),
-					  ],
-				]})
+				}})	*/
 			}else
 			if(message === 'RouteResponse'){
 
@@ -793,7 +1108,17 @@ class App extends Container<any,Partial<State>> {
 			}else
 			if(message === 'EvFleetSupply'){
 				const {vehicle_id}:any = el.object
-				this.setState({vehicle_id})
+				if(this.vehicle_id !== vehicle_id){
+					this.setVehicleId_Ev(vehicle_id)
+				}
+			}else
+			if(message === 'VehicleRouteLayer'){
+				const {vehicle_id}:any = el.object
+				if(this.vehicle_id !== vehicle_id){
+					this.setVehicleId(vehicle_id)
+				}
+			}else
+			if(message === 'DeliveryPlanningRequest'){
 			}
 		}
 	}
@@ -807,7 +1132,6 @@ class App extends Container<any,Partial<State>> {
 		const { actions, clickedObject, viewport, routePaths,
 			ExtractedData, depotsData, linemapData } = props
 		const { movesbase, movedData } = ExtractedData || { movesbase:[], movedData:[] }
-		const evfleetsupply = this.state.evfleetsupply
 		let layers:any[] = []
 		const onHover = this.onHover.bind(this);
 		const onClick = this.onClick.bind(this);
@@ -861,8 +1185,8 @@ class App extends Container<any,Partial<State>> {
 				} as any)
 			)
 		}
-		if (evfleetsupply.length > 0) {
-			const data = evfleetsupply.filter((x)=>x.position)
+		if (this.evfleetsupply.length > 0) {
+			const data = this.evfleetsupply.filter((x)=>x.position)
 			layers.push(
 				new SimpleMeshLayer({
 					id: 'evfleetsupply-layer',
@@ -872,13 +1196,90 @@ class App extends Container<any,Partial<State>> {
 					getPosition: (x:EvFleetSupply)=>x.position,
 					getColor: (x:EvFleetSupply)=>ratecolor(x.soc),
 					getOrientation: (x:EvFleetSupply) => x.direction ? [0,-x.direction,90] : [0,0,90],
-					getScale: (x:EvFleetSupply)=>x.vehicle_id === this.state.vehicle_id?[1.5,1.5,1.5]:[1,1,1],
+					getScale: (x:EvFleetSupply)=>x.vehicle_id === this.vehicle_id?[1.5,1.5,1.5]:[1,1,1],
 					opacity: 0.5,
 					pickable: true,
 					onHover,
 					onClick
 				} as any)
 			)
+		}
+		if (this.deliveryplanningprovide.length > 0) {
+			const {deliveryplanningprovide,module_id,provide_id,vehicle_id,delivery_plan_id} = this
+			for (const element of deliveryplanningprovide){
+				if(module_id !== undefined && element.module_id === module_id &&
+					provide_id !== undefined && element.provide_id === provide_id && vehicle_id !== undefined){
+	
+					const findIndex = element.Vehicle_assignate.findIndex(x=>x.vehicle_id === vehicle_id && x.delivery_plan_id === delivery_plan_id)
+					if(findIndex < 0){
+						break
+					}
+					//delivery_plan_id_list
+					const { route_info, charging_plans } = element.Vehicle_assignate[findIndex]
+					const data:PathData[] = []
+					const path:number[][] = []
+					for (const {longitude,latitude} of route_info){
+						path.push([longitude, latitude])
+					}
+					data.push({path:path, vehicle_id, delivery_plan_id, charging_plans, message:"VehicleRouteLayer"})
+					layers.push( new PathLayer({
+						id: 'VehicleRouteLayer',
+						data,
+						visible:true,
+						opacity: 1.0,
+						pickable:true,
+						widthUnits: 'meters',
+						widthMinPixels: 1,
+						capRounded: true,
+						jointRounded: true,
+						getPath: (x:PathData) => x.path,
+						getColor: (x:PathData) => x.color || [0,255,0,255],
+						getWidth: (x:PathData) => x.width || 10,
+						onHover,
+						onClick
+					} as any))
+					if(element.delivery_plan && this.deliveryplanningrequest && this.deliveryplanningrequest.delivery_info &&
+						this.deliveryplanningrequest.delivery_info.packages_info){
+
+						const packages_info_list = this.deliveryplanningrequest.delivery_info.packages_info
+						const delivery_point_data:any[] = []
+						for (const delivery_plan of element.delivery_plan){
+							if(delivery_plan.delivery_plan_id === delivery_plan_id){
+								for (const delivery_packages_info of delivery_plan.packages_info){
+									const selectData = packages_info_list.filter(x=>x.package_id === delivery_packages_info.package_id)
+									for(const package_info of selectData){
+										const {longitude, latitude, delivery_time, ...other} = package_info
+										delivery_point_data.push({
+											...other,
+											position:[longitude, latitude],
+											delivery_time: delivery_time_table[delivery_time],
+											estimated_time_of_arrival: delivery_packages_info.estimated_time_of_arrival,
+											color: ratecolor(delivery_time*33),
+											message: 'DeliveryPlanningRequest'
+										})
+									}
+								}
+							}
+						}
+						layers.push(
+							new SimpleMeshLayer({
+								id: 'delivery-point-layer',
+								data: delivery_point_data,
+								mesh: busstopmesh,
+								sizeScale: 30,
+								getPosition: (x:any)=>x.position,
+								getColor: (x:any)=>x.color,
+								getScale: (x:any)=>[1,1,x.weight],
+								opacity: 0.5,
+								pickable: true,
+								onHover,
+								onClick
+							} as any)
+						)
+					}
+					break
+				}
+			}
 		}
 		if (this.state.moveDataVisible && linemapData.length > 0) {
 			layers.push(
@@ -942,18 +1343,62 @@ class App extends Container<any,Partial<State>> {
 				: <LoadingIcon loading={true} />
 		const controller  = 
 			(this.state.controlVisible?
-				<Controller {...(props as any)}
-				deleteMovebase={this.deleteMovebase.bind(this)}
-				getMoveDataChecked={this.getMoveDataChecked.bind(this)}
-				getMoveOptionChecked={this.getMoveOptionChecked.bind(this)}
-				getOsmData={this.getOsmData.bind(this)}
-				movesBaseLoad={this.movesBaseLoad.bind(this)}
-				chartData={this.state.chartData}
-				data={this.state.data}
-				vehicle_id={this.state.vehicle_id}
-				evfleetsupply={this.state.evfleetsupply}
-				getVehicleIdSelected={this.getVehicleIdSelected.bind(this)}
-				/>
+				<>
+					<Controller {...(props as any)}
+					deleteMovebase={this.deleteMovebase.bind(this)}
+					getMoveDataChecked={this.getMoveDataChecked.bind(this)}
+					getMoveOptionChecked={this.getMoveOptionChecked.bind(this)}
+					getOsmData={this.getOsmData.bind(this)}
+					movesBaseLoad={this.movesBaseLoad.bind(this)}
+					chartData={this.state.chartData}
+					module_id={this.module_id}
+					provide_id={this.provide_id}
+					vehicle_id={this.vehicle_id}
+					module_id_list={this.module_id_list}
+					provide_id_list={this.provide_id_list}
+					vehicle_id_list={this.vehicle_id_list}
+					getModuleIdSelected={this.getModuleIdSelected.bind(this)}
+					getProvideIdSelected={this.getProvideIdSelected.bind(this)}
+					getVehicleIdSelected={this.getVehicleIdSelected.bind(this)}
+					delivery_plan_id={this.delivery_plan_id}
+					charging_plan_id={this.charging_plan_id}
+					delivery_plan_id_list={this.delivery_plan_id_list}
+					charging_plan_id_list={this.charging_plan_id_list}
+					getDeliveryPlanIdSelected={this.getDeliveryPlanIdSelected.bind(this)}
+					getChargingPlanIdSelected={this.getChargingPlanIdSelected.bind(this)}
+					deliveryplanningrequest={this.deliveryplanningrequest}
+					deliveryplanadoption={this.deliveryplanadoption}
+					/>
+					<div className='harmovis_gauge'>
+						<div className='container'>
+						<ul className='list-group'>
+							<li>
+							<EvFleetSupplyChart
+							vehicle_id={this.vehicle_id}
+							evfleetsupply={this.evfleetsupply}
+							/>
+							</li>
+						</ul>
+						</div>
+					</div>
+					<div className='harmovis_schedule'>
+						<div className='container'>
+						<ul className='list-group'>
+							<li>
+							<DeliveryPlanTimeline
+							delivery_plan_id={this.delivery_plan_id}
+							charging_plan_id={this.charging_plan_id}
+							delivery_plan_id_list={this.delivery_plan_id_list}
+							charging_plan_id_list={this.charging_plan_id_list}
+							packages_info_list={this.packages_info_list}
+							charging_plan_list={this.charging_plan_list}
+							deliveryplanningrequest={this.deliveryplanningrequest}
+							/>
+							</li>
+						</ul>
+						</div>
+					</div>
+				</>
 				:<></>
 			)
 		const fpsdisp =
@@ -1077,7 +1522,7 @@ const checkTimestamp = (timestamp:{seconds:number}):boolean=>{
 	return true;
 }
 
-export const hsvToRgb = (H: number, S: number, V: number) => {
+const hsvToRgb = (H: number, S: number, V: number) => {
 	const C = V * S;
 	const Hp = H / 60;
 	const X = C * (1 - Math.abs((Hp % 2) - 1));
@@ -1100,7 +1545,7 @@ export const hsvToRgb = (H: number, S: number, V: number) => {
 	return [R, G, B];
 };
 
-export const ratecolor = (rate: number) => {
+const ratecolor = (rate: number) => {
 	let color = 0;
 	if (rate < 0) {
 		color = 0;

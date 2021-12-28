@@ -31,7 +31,9 @@ div.harmovis_information {
 	    }
     }
   }
-  
+  p {
+    margin-bottom: 8px;
+  }
   ul.flex_list {
     list-style-type: none; 
     padding: 0px; 
@@ -123,9 +125,41 @@ div.harmovis_graph {
 }
 div.harmovis_schedule {
   @extend .harmovis_information;
-  bottom: 120px; 
+  z-index: 110; 
+  color: black;
+  bottom: 100px; 
   left: 20px;
-  width: 1150px;
+  width: 70%;
+  ul {
+    background: white;
+    li {
+      margin: 0px;
+    }
+  }
+  label {
+    margin-left: 10px;
+  }
+  div.form-select {
+    width: 250px;
+    select {
+      color: black;
+      border-radius: 2px;
+      cursor: pointer;
+      line-height: 14px;
+      padding: 4px 8px;
+      text-align: center;
+      vertical-align: middle;
+      width: 100%;
+      border-width: 1px;
+      border-color: black;
+      transition: all .2s ease;
+      background: none;
+      &:hover {
+        color: gray;
+      }
+      margin: 10px;
+    }
+  }
 }
 div.harmovis_area { 
   position: fixed; 

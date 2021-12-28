@@ -11,7 +11,8 @@ interface Props {
 }
 export default class EvFleetSupplyChart extends React.Component<Props> {
   render() {
-    if(this.props.vehicle_id !== undefined && this.props.evfleetsupply.length > 0){
+    if(this.props.vehicle_id !== undefined &&
+      this.props.evfleetsupply.findIndex(x=>x.vehicle_id === this.props.vehicle_id) >= 0){
       return (<_EvFleetSupplyChart {...this.props} />);
     }else{
       return (null);

@@ -2,22 +2,12 @@
 declare module "deck.gl" {
 
   import * as React from 'react';
-  import { Layer } from '@deck.gl/core';
+  import { Layer, LayerProps } from '@deck.gl/core';
 
   interface Uniforms {
     extruded: boolean,
     opacity: number,
     coverage: number
-  }
-  interface LayerProps {
-    id?: string;
-    data?: any[];
-    visible?: boolean;
-    pickable?: boolean;
-    opacity?: number;
-    onHover?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-    onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-    coordinateSystem?: number;
   }
 
   interface HexagonLayerProps extends LayerProps {
@@ -68,7 +58,18 @@ declare module "deck.gl" {
 declare module "@deck.gl/core" {
 
   import * as React from 'react';
-  import { Uniforms, LayerProps } from 'deck.gl';
+  import { Uniforms } from 'deck.gl';
+
+  interface LayerProps {
+    id?: string;
+    data?: any[];
+    visible?: boolean;
+    pickable?: boolean;
+    opacity?: number;
+    onHover?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    coordinateSystem?: number;
+  }
 
   class Layer <P extends LayerProps = LayerProps, S = {}> {
     constructor(props: P);
@@ -87,12 +88,12 @@ declare module "@deck.gl/core" {
       changeFlags: any,
     }): void;
   }
+  class CompositeLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}
 }
 
 declare module "@deck.gl/mesh-layers" {
 
-  import { Layer } from '@deck.gl/core';
-  import { LayerProps } from 'deck.gl';
+  import { Layer, LayerProps } from '@deck.gl/core';
 
   class ScenegraphLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}
   class SimpleMeshLayer<P extends LayerProps = LayerProps, S = {}> extends Layer<P, S> {}

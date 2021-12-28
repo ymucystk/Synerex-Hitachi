@@ -42,7 +42,7 @@ export interface DeliveryPlanningProvide {
     provide_id?: string,
     delivery_plan?: DeliveryPlan[],   //MAX 10
     charging_plan?: ChargingPlan[],
-    vehicle_assignate?: VehicleAssignate[],   //MAX 10
+    Vehicle_assignate?: VehicleAssignate[],   //MAX 10
 }
 
 
