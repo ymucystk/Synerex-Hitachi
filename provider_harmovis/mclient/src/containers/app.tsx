@@ -19,7 +19,7 @@ registerLoaders([OBJLoader]);
 const busmesh = './bus.obj';
 const busstopmesh = './busstop.obj';
 const osmPath = './map.osm';
-
+const transitionDuration = 500 //msec
 const {PI:pi,min,max,abs,sin,cos,tan,atan2} = Math;
 const radians = (degree: number) => degree * pi / 180;
 const degrees = (radian: number) => radian * 180 / pi;
@@ -733,20 +733,24 @@ class App extends Container<any,Partial<State>> {
 		for (let i = 0, lengthi = this.evfleetsupply.length; i < lengthi; i=(i+1)|0) {
 			if(json.vehicle_id === this.evfleetsupply[i].vehicle_id){
 				let direction = 0
-				if(this.evfleetsupply[i].position[0] === json.longitude && this.evfleetsupply[i].position[1] === json.latitude){
+				if(this.evfleetsupply[i].targetPosition[0] === json.longitude && this.evfleetsupply[i].targetPosition[1] === json.latitude){
 					direction = this.evfleetsupply[i].direction
 				}else{
-					const x1 = radians(this.evfleetsupply[i].position[0])
-					const y1 = radians(this.evfleetsupply[i].position[1])
+					const x1 = radians(this.evfleetsupply[i].targetPosition[0])
+					const y1 = radians(this.evfleetsupply[i].targetPosition[1])
 					const x2 = radians(json.longitude)
 					const y2 = radians(json.latitude)
 					const deltax = x2 - x1
 					direction = degrees(atan2(sin(deltax), 
 						cos(y1) * tan(y2) - sin(y1) * cos(deltax))) % 360
 				}
-				this.evfleetsupply[i] = {...json}
-				this.evfleetsupply[i].message = 'EvFleetSupply'
-				this.evfleetsupply[i].position = [json.longitude, json.latitude,0]
+				this.evfleetsupply[i] = {...this.evfleetsupply[i], ...json}
+				const {targetPosition} = this.evfleetsupply[i]
+				this.evfleetsupply[i].sourcePosition = [
+					targetPosition[0], targetPosition[1], targetPosition[2],
+				]
+				this.evfleetsupply[i].targetPosition = [json.longitude, json.latitude,0]
+				this.evfleetsupply[i].elapsedtime = Date.now()
 				this.evfleetsupply[i].direction = direction
 				this.evfleetsupply[i].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
 				const air_conditioner = ((this.evfleetsupply[i].air_conditioner > 0) ? '1:use':'0:not use')
@@ -757,9 +761,11 @@ class App extends Container<any,Partial<State>> {
 		}
 		if(findIdx < 0){
 			findIdx = this.evfleetsupply.length
-			this.evfleetsupply[findIdx] = {...json}
+			this.evfleetsupply[findIdx] = {...this.evfleetsupply[findIdx], ...json}
 			this.evfleetsupply[findIdx].message = 'EvFleetSupply'
-			this.evfleetsupply[findIdx].position = [json.longitude, json.latitude,0]
+			this.evfleetsupply[findIdx].sourcePosition = [json.longitude, json.latitude,0]
+			this.evfleetsupply[findIdx].targetPosition = [json.longitude, json.latitude,0]
+			this.evfleetsupply[findIdx].elapsedtime = Date.now()
 			this.evfleetsupply[findIdx].direction = 0
 			this.evfleetsupply[findIdx].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
 			const air_conditioner = ((this.evfleetsupply[findIdx].air_conditioner > 0) ? '1:use':'0:not use')
@@ -1192,7 +1198,38 @@ class App extends Container<any,Partial<State>> {
 			)
 		}
 		if (this.evfleetsupply.length > 0) {
-			const data = this.evfleetsupply.filter((x)=>x.position)
+			const data:EvFleetSupply[] = this.evfleetsupply.reduce((data:EvFleetSupply[],current:EvFleetSupply,index)=>{
+				if(current.targetPosition[0] === current.sourcePosition[0] &&
+					current.targetPosition[1] === current.sourcePosition[1] &&
+					current.targetPosition[2] === current.sourcePosition[2]){
+					current.position = [
+						current.targetPosition[0],
+						current.targetPosition[1],
+						current.targetPosition[2],
+					]
+					data.push(current)
+					return data
+				}else{
+					const now = Date.now()
+					const difference = now - current.elapsedtime
+					if(0 < transitionDuration && difference <= transitionDuration){
+						const rate = difference / transitionDuration
+						current.position = [
+							current.sourcePosition[0] - (current.sourcePosition[0] - current.targetPosition[0]) * rate,
+							current.sourcePosition[1] - (current.sourcePosition[1] - current.targetPosition[1]) * rate,
+							current.sourcePosition[2] - (current.sourcePosition[2] - current.targetPosition[2]) * rate
+						];
+					}else{
+						current.position = [
+							current.targetPosition[0],
+							current.targetPosition[1],
+							current.targetPosition[2],
+						]
+					}
+					data.push(current)
+					return data
+				}
+			},[])
 			layers.push(
 				new SimpleMeshLayer({
 					id: 'evfleetsupply-layer',
@@ -1213,6 +1250,7 @@ class App extends Container<any,Partial<State>> {
 				new TextLayer({
 					id: 'evfleetsupply-text-layer',
 					data,
+					getPosition: (x:EvFleetSupply)=>x.position,
 					getColor: (x:EvFleetSupply)=>ratecolor(x.soc),
 					getTextAnchor: 'start',
 					getSize: 15,
