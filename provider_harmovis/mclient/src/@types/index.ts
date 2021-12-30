@@ -91,7 +91,7 @@ export interface EvFleetSupply {    //車両のリアル位置＆情報（1秒�
     soc?: number,   //バッテリー充電率(%)
     soh?: number,   //バッテリー劣化率(%)
     air_conditioner?: number,   //0:not use,1:use
-    position?: [number,number,number],
+    position?: number[],
     sourcePosition?: [number,number,number],
     targetPosition?: [number,number,number],
     elapsedtime?: number,   //UNIX-TIME(msec)

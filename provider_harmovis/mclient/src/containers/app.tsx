@@ -745,10 +745,7 @@ class App extends Container<any,Partial<State>> {
 						cos(y1) * tan(y2) - sin(y1) * cos(deltax))) % 360
 				}
 				this.evfleetsupply[i] = {...this.evfleetsupply[i], ...json}
-				const {targetPosition} = this.evfleetsupply[i]
-				this.evfleetsupply[i].sourcePosition = [
-					targetPosition[0], targetPosition[1], targetPosition[2],
-				]
+				this.evfleetsupply[i].sourcePosition = [...this.evfleetsupply[i].targetPosition]
 				this.evfleetsupply[i].targetPosition = [json.longitude, json.latitude,0]
 				this.evfleetsupply[i].elapsedtime = Date.now()
 				this.evfleetsupply[i].direction = direction
@@ -1198,15 +1195,11 @@ class App extends Container<any,Partial<State>> {
 			)
 		}
 		if (this.evfleetsupply.length > 0) {
-			const data:EvFleetSupply[] = this.evfleetsupply.reduce((data:EvFleetSupply[],current:EvFleetSupply,index)=>{
+			const data:EvFleetSupply[] = this.evfleetsupply.reduce((data:EvFleetSupply[],current:EvFleetSupply)=>{
 				if(current.targetPosition[0] === current.sourcePosition[0] &&
 					current.targetPosition[1] === current.sourcePosition[1] &&
 					current.targetPosition[2] === current.sourcePosition[2]){
-					current.position = [
-						current.targetPosition[0],
-						current.targetPosition[1],
-						current.targetPosition[2],
-					]
+					current.position = [...current.targetPosition]
 					data.push(current)
 					return data
 				}else{
@@ -1214,17 +1207,11 @@ class App extends Container<any,Partial<State>> {
 					const difference = now - current.elapsedtime
 					if(0 < transitionDuration && difference <= transitionDuration){
 						const rate = difference / transitionDuration
-						current.position = [
-							current.sourcePosition[0] - (current.sourcePosition[0] - current.targetPosition[0]) * rate,
-							current.sourcePosition[1] - (current.sourcePosition[1] - current.targetPosition[1]) * rate,
-							current.sourcePosition[2] - (current.sourcePosition[2] - current.targetPosition[2]) * rate
-						];
+						current.position = current.targetPosition.map((targetPosition,index)=>{
+							return current.sourcePosition[index] - (current.sourcePosition[index] - targetPosition) * rate
+						})
 					}else{
-						current.position = [
-							current.targetPosition[0],
-							current.targetPosition[1],
-							current.targetPosition[2],
-						]
+						current.position = [...current.targetPosition]
 					}
 					data.push(current)
 					return data
