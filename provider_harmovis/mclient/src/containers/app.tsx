@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArcLayer, PathLayer, TextLayer } from 'deck.gl';
+import { ArcLayer, PathLayer, TextLayer, LineLayer } from 'deck.gl';
 import { SimpleMeshLayer } from '@deck.gl/mesh-layers';
 import Axios from 'axios';
 import { xml2js } from 'xml-js';
@@ -27,6 +27,9 @@ const degrees = (radian: number) => radian * 180 / pi;
 interface PathData { path:number[][], color?:number[], width?:number,
 	vehicle_id:number, delivery_plan_id:number, message:string, charging_plans?: ChargingPlans[], }
 
+interface LineData { vehicle_id:number, message:string,
+	line_data:{sourcePosition:[number,number,number], targetPosition:[number,number,number], color?:number[], width?:number}[] }
+	
 const delivery_time_table:string[] = [
 	'0 :','1 : 09:00 - 12:00','2 : 14:00 - 18:00','3 : 18:00 - 21:00'
 ]
@@ -128,6 +131,7 @@ class App extends Container<any,Partial<State>> {
 		this.charging_plan_id_list = []
 		this.charging_plan_list = []
 		this.evfleetsupply = []
+		this.evfleetroute= []
 		this.deliveryplanningrequest = undefined
 		this.vehiclelist = []
 		this.deliveryplanadoption = []
@@ -148,6 +152,7 @@ class App extends Container<any,Partial<State>> {
 	charging_plan_id_list: number[]
 	charging_plan_list:ChargingPlan[]
 	evfleetsupply: EvFleetSupply[]
+	evfleetroute: LineData[]
 	deliveryplanningrequest: DeliveryPlanningRequest
 	vehiclelist: VehicleList[]
 	deliveryplanadoption: DeliveryPlanAdoption[]
@@ -768,6 +773,34 @@ class App extends Container<any,Partial<State>> {
 			const air_conditioner = ((this.evfleetsupply[findIdx].air_conditioner > 0) ? '1:use':'0:not use')
 			this.evfleetsupply[findIdx].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+json.soh+'\nair_conditioner:'+air_conditioner
 		}
+		
+		findIdx = -1;
+		for (let i = 0, lengthi = this.evfleetroute.length; i < lengthi; i=(i+1)|0) {
+			if(json.vehicle_id === this.evfleetroute[i].vehicle_id){
+				const dataLength = this.evfleetroute[i].line_data.length
+				this.evfleetroute[i].line_data[dataLength-1].targetPosition = [json.longitude, json.latitude,0]
+				this.evfleetroute[i].line_data[dataLength] = {
+					sourcePosition: [json.longitude, json.latitude,0],
+					targetPosition: [json.longitude, json.latitude,0],
+					color: ratecolor(json.soc)
+				}
+				findIdx = i
+				break
+			}
+		}
+		if(findIdx < 0){
+			findIdx = this.evfleetroute.length
+			this.evfleetroute[findIdx] = {
+				vehicle_id: json.vehicle_id,
+				message: 'evfleetroute',
+				line_data: []
+			}
+			this.evfleetroute[findIdx].line_data.push({
+				sourcePosition: [json.longitude, json.latitude,0],
+				targetPosition: [json.longitude, json.latitude,0],
+				color: ratecolor(json.soc)
+			})
+		}
 		this.setVehicleId_Ev()
 	}
 
@@ -1245,6 +1278,26 @@ class App extends Container<any,Partial<State>> {
 					getPixelOffset: [20,-50]
 				} as any)
 			)
+		}
+		if (this.evfleetroute.length > 0) {
+			const line_data = this.evfleetroute.find((x)=>x.vehicle_id === this.vehicle_id).line_data
+			const data = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
+			if (data.length > 0) {
+				layers.push(
+					new LineLayer({
+						id: 'evfleetroute-LineLayer',
+						data,
+						pickable: true,
+						widthUnits: 'meters',
+						widthMinPixels: 0.1,
+						getSourcePosition: (x: any) => x.sourcePosition,
+						getTargetPosition: (x: any) => x.targetPosition,
+						getColor: (x: any) => x.color || [0,255,0,255],
+						getWidth: (x:any) => x.width || 10,
+						opacity: 0.8
+					  })
+				)
+			}
 		}
 		if (this.deliveryplanningprovide.length > 0) {
 			const {deliveryplanningprovide,module_id,provide_id,vehicle_id,delivery_plan_id} = this
