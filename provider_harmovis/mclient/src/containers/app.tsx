@@ -332,7 +332,7 @@ class App extends Container<any,Partial<State>> {
 				for (const element1 of filter_list){
 					for (const element2 of element1.delivery_plan){
 						if(element2.delivery_plan_id === this.delivery_plan_id){
-							for (const element3 of element2.packages_info){
+							for (const element3 of element2.packages_plan){
 								packages_info_list.push(element3)
 							}
 						}
@@ -1287,7 +1287,7 @@ class App extends Container<any,Partial<State>> {
 						const delivery_point_data:any[] = []
 						for (const delivery_plan of element.delivery_plan){
 							if(delivery_plan.delivery_plan_id === delivery_plan_id){
-								for (const delivery_packages_info of delivery_plan.packages_info){
+								for (const delivery_packages_info of delivery_plan.packages_plan){
 									const selectData = packages_info_list.filter(x=>x.package_id === delivery_packages_info.package_id)
 									for(const package_info of selectData){
 										const {longitude, latitude, delivery_time, ...other} = package_info

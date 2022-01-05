@@ -37,6 +37,9 @@ var (
 	ioserv          *gosocketio.Server
 	sxServerAddress string
 	mapboxToken     string
+	channelAlt      = flag.Int("channelAlt", int(pbase.ALT_PT_SVC), "channelAlt")
+	channelEvfleet  = flag.Int("channelEvfleet", 30, "channelEvfleet")
+	channelDp       = flag.Int("channelDp", 31, "channelDp")
 )
 
 // assetsFileHandler for static Data
@@ -400,7 +403,11 @@ func main() {
 	name := "HarmoVis"
 	flag.Parse()
 
-	channelTypes := []uint32{pbase.ALT_PT_SVC, pbase.RIDE_SHARE, pbase.AD_SERVICE} //チャンネルは借値
+	channelAlt := uint32(*channelAlt)
+	channelEvfleet := uint32(*channelEvfleet)
+	channelDp := uint32(*channelDp)
+
+	channelTypes := []uint32{channelAlt, channelEvfleet, channelDp} //チャンネルは借値
 	var rerr error
 	sxServerAddress, rerr = synerexsxutil.RegisterNode(*nodesrv, name, channelTypes, nil)
 	if rerr != nil {
@@ -422,9 +429,9 @@ func main() {
 	client := synerexsxutil.GrpcConnectServer(sxServerAddress) // if there is server address change, we should do it!
 	log.Printf("Connecting SynerexServer at [%s]\n", sxServerAddress)
 
-	alt_client := synerexsxutil.NewSXServiceClient(client, pbase.ALT_PT_SVC, name)
-	evfleet_client := synerexsxutil.NewSXServiceClient(client, pbase.RIDE_SHARE, name) //チャンネルは借値
-	dp_client := synerexsxutil.NewSXServiceClient(client, pbase.AD_SERVICE, name)      //チャンネルは借値
+	alt_client := synerexsxutil.NewSXServiceClient(client, channelAlt, name)
+	evfleet_client := synerexsxutil.NewSXServiceClient(client, channelEvfleet, name) //チャンネルは借値
+	dp_client := synerexsxutil.NewSXServiceClient(client, channelDp, name)           //チャンネルは借値
 
 	wg.Add(1)
 

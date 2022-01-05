@@ -5,7 +5,7 @@ export interface PackagePlan {
 
 export interface DeliveryPlan {
     delivery_plan_id?: number,
-    packages_info?: PackagePlan[],   //MAX 120
+    packages_plan?: PackagePlan[],   //MAX 120
 }
 
 export interface ChargingPlan {
