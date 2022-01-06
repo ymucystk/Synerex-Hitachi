@@ -1277,7 +1277,7 @@ class App extends Container<any,Partial<State>> {
 					getTextAnchor: 'start',
 					getSize: 15,
 					fontWeight: 100,
-					getPixelOffset: [20,-50]
+					getPixelOffset: [30,-50]
 				} as any)
 			)
 		}
