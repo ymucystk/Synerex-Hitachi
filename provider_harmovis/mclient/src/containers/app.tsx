@@ -782,7 +782,8 @@ class App extends Container<any,Partial<State>> {
 				this.evfleetroute[i].line_data[dataLength] = {
 					sourcePosition: [json.longitude, json.latitude,0],
 					targetPosition: [json.longitude, json.latitude,0],
-					color: ratecolor(json.soc)
+					color: ratecolor(json.soc),
+					width: (json.soh/10)
 				}
 				findIdx = i
 				break
@@ -798,7 +799,8 @@ class App extends Container<any,Partial<State>> {
 			this.evfleetroute[findIdx].line_data.push({
 				sourcePosition: [json.longitude, json.latitude,0],
 				targetPosition: [json.longitude, json.latitude,0],
-				color: ratecolor(json.soc)
+				color: ratecolor(json.soc),
+				width: (json.soh/10)
 			})
 		}
 		this.setVehicleId_Ev()
@@ -1293,7 +1295,7 @@ class App extends Container<any,Partial<State>> {
 						getSourcePosition: (x: any) => x.sourcePosition,
 						getTargetPosition: (x: any) => x.targetPosition,
 						getColor: (x: any) => x.color || [0,255,0,255],
-						getWidth: (x:any) => x.width || 10,
+						getWidth: (x:any) => x.width || 5,
 						opacity: 0.8
 					  })
 				)
