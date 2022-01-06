@@ -95,6 +95,7 @@ func run_server() *gosocketio.Server {
 
 	server.On("get_mapbox_token", func(c *gosocketio.Channel) {
 		log.Printf("Requested mapbox access token")
+		log.Printf("mapbox %s ", *mapbox)
 		mapboxToken = os.Getenv("MAPBOX_ACCESS_TOKEN")
 		if *mapbox != "" {
 			mapboxToken = *mapbox
