@@ -1282,23 +1282,25 @@ class App extends Container<any,Partial<State>> {
 			)
 		}
 		if (this.evfleetroute.length > 0) {
-			const line_data = this.evfleetroute.find((x)=>x.vehicle_id === this.vehicle_id).line_data
-			const data = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
-			if (data.length > 0) {
-				layers.push(
-					new LineLayer({
-						id: 'evfleetroute-LineLayer',
-						data,
-						pickable: true,
-						widthUnits: 'meters',
-						widthMinPixels: 0.1,
-						getSourcePosition: (x: any) => x.sourcePosition,
-						getTargetPosition: (x: any) => x.targetPosition,
-						getColor: (x: any) => x.color || [0,255,0,255],
-						getWidth: (x:any) => x.width || 5,
-						opacity: 0.8
-					  })
-				)
+			for(const vehicle_id of this.vehicle_id_list){
+				const line_data = this.evfleetroute.find((x)=>x.vehicle_id === vehicle_id).line_data
+				const data = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
+				if (data.length > 0) {
+					layers.push(
+						new LineLayer({
+							id: 'evfleetroute-LineLayer-' + vehicle_id,
+							data,
+							pickable: true,
+							widthUnits: 'meters',
+							widthMinPixels: 0.1,
+							getSourcePosition: (x: any) => x.sourcePosition,
+							getTargetPosition: (x: any) => x.targetPosition,
+							getColor: (x: any) => x.color || [0,255,0,255],
+							getWidth: (x:any) => x.width || 5,
+							opacity: 0.8
+						  })
+					)
+				}
 			}
 		}
 		if (this.deliveryplanningprovide.length > 0) {

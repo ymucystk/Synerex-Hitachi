@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	gosocketio "github.com/mtfelian/golang-socketio"
 	delivery_planning "github.com/smart_dispatch/delivery_planning/proto"
 	dispatch "github.com/smart_dispatch/dispatch/proto"
@@ -22,6 +21,7 @@ import (
 	synerexapi "github.com/synerex/synerex_api"
 	pbase "github.com/synerex/synerex_proto"
 	synerexsxutil "github.com/synerex/synerex_sxutil"
+	"google.golang.org/protobuf/proto"
 )
 
 // Harmoware Vis-Synerex wiht Layer extension provider provides map information to Web Service through socket.io.
@@ -127,7 +127,7 @@ func reconnectClient(client *synerexsxutil.SXServiceClient) {
 			client.SXClient = newClt
 		}
 	} else { // someone may connect!
-		log.Printf("Use reconnected server\n", sxServerAddress)
+		log.Printf("Use reconnected server [%s]\n", sxServerAddress)
 	}
 	mu.Unlock()
 }
