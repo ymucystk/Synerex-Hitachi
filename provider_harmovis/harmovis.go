@@ -19,7 +19,6 @@ import (
 	evfleet "github.com/smart_dispatch/evfleet/proto"
 	proto_alt_pt "github.com/synerex/proto_alt_pt"
 	synerexapi "github.com/synerex/synerex_api"
-	pbase "github.com/synerex/synerex_proto"
 	synerexsxutil "github.com/synerex/synerex_sxutil"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,15 +30,19 @@ var (
 	assetDir        = flag.String("assetdir", "", "set Web client dir")
 	mapbox          = flag.String("mapbox", "", "Set Mapbox access token")
 	port            = flag.Int("port", 3030, "HarmoVis Ext Provider Listening Port")
+	httpsport       = flag.Int("httpsport", 443, "HarmoVis Ext Provider Listening httpsport")
+	https           = flag.Bool("https", true, "https")
+	sslcrt          = flag.String("sslcrt", "./key/debug.crt", "sslcrt")
+	sslkey          = flag.String("sslkey", "./key/debug.key", "sslkey")
 	mu              = new(sync.Mutex)
 	version         = "0.00"
 	assetsDir       http.FileSystem
 	ioserv          *gosocketio.Server
 	sxServerAddress string
 	mapboxToken     string
-	channelAlt      = flag.Int("channelAlt", int(pbase.ALT_PT_SVC), "channelAlt")
-	channelEvfleet  = flag.Int("channelEvfleet", 30, "channelEvfleet")
-	channelDp       = flag.Int("channelDp", 31, "channelDp")
+	channelAlt      = flag.Int("channelAlt", 99 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
+	channelEvfleet  = flag.Int("channelEvfleet", 20, "channelEvfleet")
+	channelDp       = flag.Int("channelDp", 21, "channelDp")
 )
 
 // assetsFileHandler for static Data
@@ -447,10 +450,18 @@ func main() {
 	serveMux.Handle("/socket.io/", ioserv)
 	serveMux.HandleFunc("/", assetsFileHandler)
 
-	log.Printf("Starting Harmoware-VIS Provider %s  on port %d", version, *port)
-	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", *port), serveMux)
-	if err != nil {
-		log.Fatal(err)
+	if *https {
+		log.Printf("Starting Harmoware-VIS Provider %s  on port %d", version, *httpsport)
+		err := http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%d", *httpsport), *sslcrt, *sslkey, serveMux)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Printf("Starting Harmoware-VIS Provider %s  on port %d", version, *port)
+		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", *port), serveMux)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	wg.Wait()
