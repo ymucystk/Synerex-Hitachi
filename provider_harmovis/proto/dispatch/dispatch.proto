@@ -86,7 +86,8 @@ message DeliveryPlanningProvide {
 message VehicleRequest {
   uint32 event_id = 1;
   string time_stamp = 2;
-  uint64 number_of_vehicles = 3;
+  uint64 module_id = 3;
+  uint64 number_of_vehicles = 4;
 }
 
 message VehiclePlanAdoption {
@@ -110,6 +111,7 @@ message ElectricityCostSimulation {
   uint32 program_id = 1;
   uint32 event_id = 2;
   string time_stamp = 3;
-  string departure_time = 4;
-  repeated PointsNum points_num = 5;
+  uint64 module_id = 4;
+  string departure_time = 5;
+  repeated PointsNum points_num = 6;
 }

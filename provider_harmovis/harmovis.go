@@ -26,23 +26,26 @@ import (
 // Harmoware Vis-Synerex wiht Layer extension provider provides map information to Web Service through socket.io.
 
 var (
-	nodesrv         = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
-	assetDir        = flag.String("assetdir", "", "set Web client dir")
-	mapbox          = flag.String("mapbox", "", "Set Mapbox access token")
-	port            = flag.Int("port", 3030, "HarmoVis Ext Provider Listening Port")
-	httpsport       = flag.Int("httpsport", 443, "HarmoVis Ext Provider Listening httpsport")
-	https           = flag.Bool("https", true, "https")
-	sslcrt          = flag.String("sslcrt", "./key/debug.crt", "sslcrt")
-	sslkey          = flag.String("sslkey", "./key/debug.key", "sslkey")
-	mu              = new(sync.Mutex)
-	version         = "0.00"
-	assetsDir       http.FileSystem
-	ioserv          *gosocketio.Server
-	sxServerAddress string
-	mapboxToken     string
-	channelAlt      = flag.Int("channelAlt", 99 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
-	channelEvfleet  = flag.Int("channelEvfleet", 20, "channelEvfleet")
-	channelDp       = flag.Int("channelDp", 21, "channelDp")
+	nodesrv                 = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
+	assetDir                = flag.String("assetdir", "", "set Web client dir")
+	mapbox                  = flag.String("mapbox", "", "Set Mapbox access token")
+	port                    = flag.Int("port", 3030, "HarmoVis Ext Provider Listening Port")
+	httpsport               = flag.Int("httpsport", 443, "HarmoVis Ext Provider Listening httpsport")
+	httplaunch              = flag.Bool("httplaunch", false, "httplaunch")
+	sslcrt                  = flag.String("sslcrt", "./key/debug.crt", "sslcrt")
+	sslkey                  = flag.String("sslkey", "./key/debug.key", "sslkey")
+	mu                      = new(sync.Mutex)
+	version                 = "0.00"
+	assetsDir               http.FileSystem
+	ioserv                  *gosocketio.Server
+	sxServerAddress         string
+	mapboxToken             string
+	channelAlt                                                         = flag.Int("channelAlt", 1 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
+	channelEvfleet                                                     = flag.Int("channelEvfleet", 20, "channelEvfleet")
+	channelDp                                                          = flag.Int("channelDp", 21, "channelDp")
+	DeliveryPlanningProvide []*dispatch.DeliveryPlanningProvide        = nil
+	DeliveryPlanningRequest *delivery_planning.DeliveryPlanningRequest = nil
+	DeliveryPlanAdoption    []*delivery_planning.DeliveryPlanAdoption  = nil
 )
 
 // assetsFileHandler for static Data
@@ -105,6 +108,46 @@ func run_server() *gosocketio.Server {
 		}
 		c.Emit("mapbox_token", mapboxToken)
 		log.Printf("mapbox-token transferred %s ", mapboxToken)
+	})
+
+	server.On("save_data_transmission_request", func(c *gosocketio.Channel) {
+		log.Printf("save_data_transmission_request")
+		if DeliveryPlanningProvide != nil {
+			for _, x := range DeliveryPlanningProvide {
+				DeliveryPlanningProvide_1 := &dispatch.DeliveryPlanningProvide{
+					EventId:      x.EventId,
+					TimeStamp:    x.TimeStamp,
+					ModuleId:     x.ModuleId,
+					ProvideId:    x.ProvideId,
+					DeliveryPlan: x.DeliveryPlan,
+					ChargingPlan: x.ChargingPlan,
+				}
+				jsonBytes_1, _ := json.Marshal(DeliveryPlanningProvide_1)
+				c.Emit("deliveryplanningprovide", string(jsonBytes_1))
+
+				DeliveryPlanningProvide_2 := &dispatch.DeliveryPlanningProvide{
+					EventId:          x.EventId,
+					ModuleId:         x.ModuleId,
+					ProvideId:        x.ProvideId,
+					VehicleAssignate: x.VehicleAssignate,
+				}
+				jsonBytes_2, _ := json.Marshal(DeliveryPlanningProvide_2)
+				c.Emit("deliveryplanningprovide", string(jsonBytes_2))
+			}
+			log.Printf("response DeliveryPlanningProvide")
+		}
+		if DeliveryPlanningRequest != nil {
+			jsonBytes, _ := json.Marshal(DeliveryPlanningRequest)
+			c.Emit("deliveryplanningrequest", string(jsonBytes))
+			log.Printf("response DeliveryPlanningRequest")
+		}
+		if DeliveryPlanAdoption != nil {
+			for _, x := range DeliveryPlanAdoption {
+				jsonBytes, _ := json.Marshal(x)
+				c.Emit("deliveryplanadoption", string(jsonBytes))
+			}
+			log.Printf("response DeliveryPlanAdoption")
+		}
 	})
 
 	server.On(gosocketio.OnDisconnection, func(c *gosocketio.Channel) {
@@ -253,10 +296,10 @@ func supplyAltCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply
 func supplyEvfleetCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply) {
 	switch sp.SupplyName {
 	case "EvFleetSupply":
-		evfleet := &evfleet.EvFleetSupply{}
-		err := proto.Unmarshal(sp.Cdata.Entity, evfleet)
+		EvFleetSupply := &evfleet.EvFleetSupply{}
+		err := proto.Unmarshal(sp.Cdata.Entity, EvFleetSupply)
 		if err == nil {
-			jsonBytes, _ := json.Marshal(evfleet)
+			jsonBytes, _ := json.Marshal(EvFleetSupply)
 			log.Printf("EvFleetSupply: %v", string(jsonBytes))
 			mu.Lock()
 			ioserv.BroadcastToAll("evfleetsupply", string(jsonBytes))
@@ -265,10 +308,10 @@ func supplyEvfleetCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Su
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
 	case "VehicleList":
-		evfleet := &evfleet.VehicleList{}
-		err := proto.Unmarshal(sp.Cdata.Entity, evfleet)
+		VehicleList := &evfleet.VehicleList{}
+		err := proto.Unmarshal(sp.Cdata.Entity, VehicleList)
 		if err == nil {
-			jsonBytes, _ := json.Marshal(evfleet)
+			jsonBytes, _ := json.Marshal(VehicleList)
 			log.Printf("VehicleList: %v", string(jsonBytes))
 			mu.Lock()
 			ioserv.BroadcastToAll("vehiclelist", string(jsonBytes))
@@ -277,10 +320,10 @@ func supplyEvfleetCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Su
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
 	case "EvFleetResponse":
-		evfleet := &evfleet.EvFleetResponse{}
-		err := proto.Unmarshal(sp.Cdata.Entity, evfleet)
+		EvFleetResponse := &evfleet.EvFleetResponse{}
+		err := proto.Unmarshal(sp.Cdata.Entity, EvFleetResponse)
 		if err == nil {
-			jsonBytes, _ := json.Marshal(evfleet)
+			jsonBytes, _ := json.Marshal(EvFleetResponse)
 			log.Printf("EvFleetResponse: %v", string(jsonBytes))
 			mu.Lock()
 			ioserv.BroadcastToAll("evfleetresponse", string(jsonBytes))
@@ -296,22 +339,53 @@ func supplyEvfleetCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Su
 func supplyDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply) {
 	switch sp.SupplyName {
 	case "DeliveryPlanningProvide":
-		dispatch := &dispatch.DeliveryPlanningProvide{}
-		err := proto.Unmarshal(sp.Cdata.Entity, dispatch)
-		if err == nil {
-			jsonBytes, _ := json.Marshal(dispatch)
-			log.Printf("DeliveryPlanningProvide: %v", string(jsonBytes))
+		//saveDeliveryPlanningProvide := &dispatch.DeliveryPlanningProvide{}
+		work := &dispatch.DeliveryPlanningProvide{}
+		err := proto.Unmarshal(sp.Cdata.Entity, work)
+		if err == nil && work.EventId == 2 {
+			findIdx := -1
+			for i, x := range DeliveryPlanningProvide {
+				if x.ModuleId == work.ModuleId && x.ProvideId == work.ProvideId {
+					findIdx = i
+					DeliveryPlanningProvide[findIdx] = work
+					break
+				}
+			}
+			if findIdx < 0 {
+				DeliveryPlanningProvide = append(DeliveryPlanningProvide, work)
+			}
+			DeliveryPlanningProvide_1 := &dispatch.DeliveryPlanningProvide{
+				EventId:      work.EventId,
+				TimeStamp:    work.TimeStamp,
+				ModuleId:     work.ModuleId,
+				ProvideId:    work.ProvideId,
+				DeliveryPlan: work.DeliveryPlan,
+				ChargingPlan: work.ChargingPlan,
+			}
+			DeliveryPlanningProvide_2 := &dispatch.DeliveryPlanningProvide{
+				EventId:          work.EventId,
+				ModuleId:         work.ModuleId,
+				ProvideId:        work.ProvideId,
+				VehicleAssignate: work.VehicleAssignate,
+			}
+			jsonBytes_1, _ := json.Marshal(DeliveryPlanningProvide_1)
+			jsonBytes_2, _ := json.Marshal(DeliveryPlanningProvide_2)
+			log.Printf("DeliveryPlanningProvide: %v", string(jsonBytes_1))
+			log.Printf("DeliveryPlanningProvide: %v", string(jsonBytes_2))
+			log.Printf("DeliveryPlanningProvide.length: %d", len(DeliveryPlanningProvide))
 			mu.Lock()
-			ioserv.BroadcastToAll("deliveryplanningprovide", string(jsonBytes))
+			ioserv.BroadcastToAll("deliveryplanningprovide", string(jsonBytes_1))
+			ioserv.BroadcastToAll("deliveryplanningprovide", string(jsonBytes_2))
 			mu.Unlock()
 		} else {
 			log.Printf("proto.Unmarshal() failed: %s", err)
+			log.Printf("DeliveryPlanningProvide EventId failed: %d", work.EventId)
 		}
 	case "DispatchResponse":
-		dispatch := &dispatch.DispatchResponse{}
-		err := proto.Unmarshal(sp.Cdata.Entity, dispatch)
+		DispatchResponse := &dispatch.DispatchResponse{}
+		err := proto.Unmarshal(sp.Cdata.Entity, DispatchResponse)
 		if err == nil {
-			jsonBytes, _ := json.Marshal(dispatch)
+			jsonBytes, _ := json.Marshal(DispatchResponse)
 			log.Printf("DispatchResponse: %v", string(jsonBytes))
 			mu.Lock()
 			ioserv.BroadcastToAll("dispdispatchresponse", string(jsonBytes))
@@ -320,34 +394,51 @@ func supplyDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply)
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
 	case "DeliveryPlanningRequest":
-		delivery_planning := &delivery_planning.DeliveryPlanningRequest{}
-		err := proto.Unmarshal(sp.Cdata.Entity, delivery_planning)
-		if err == nil {
-			jsonBytes, _ := json.Marshal(delivery_planning)
+		//DeliveryPlanningRequest := &delivery_planning.DeliveryPlanningRequest{}
+		work := &delivery_planning.DeliveryPlanningRequest{}
+		err := proto.Unmarshal(sp.Cdata.Entity, work)
+		if err == nil && work.EventId == 1 {
+			DeliveryPlanningRequest = work
+			jsonBytes, _ := json.Marshal(work)
 			log.Printf("DeliveryPlanningRequest: %v", string(jsonBytes))
 			mu.Lock()
 			ioserv.BroadcastToAll("deliveryplanningrequest", string(jsonBytes))
 			mu.Unlock()
 		} else {
 			log.Printf("proto.Unmarshal() failed: %s", err)
+			log.Printf("DeliveryPlanningRequest ModuleId failed: %d", work.EventId)
 		}
 	case "DeliveryPlanAdoption":
-		delivery_planning := &delivery_planning.DeliveryPlanAdoption{}
-		err := proto.Unmarshal(sp.Cdata.Entity, delivery_planning)
-		if err == nil {
-			jsonBytes, _ := json.Marshal(delivery_planning)
+		//DeliveryPlanAdoption := &delivery_planning.DeliveryPlanAdoption{}
+		work := &delivery_planning.DeliveryPlanAdoption{}
+		err := proto.Unmarshal(sp.Cdata.Entity, work)
+		if err == nil && work.EventId == 3 {
+			findIdx := -1
+			for i, x := range DeliveryPlanAdoption {
+				if x.ModuleId == work.ModuleId && x.ProvideId == work.ProvideId {
+					findIdx = i
+					DeliveryPlanAdoption[findIdx] = work
+					break
+				}
+			}
+			if findIdx < 0 {
+				DeliveryPlanAdoption = append(DeliveryPlanAdoption, work)
+			}
+			jsonBytes, _ := json.Marshal(work)
 			log.Printf("DeliveryPlanAdoption: %v", string(jsonBytes))
+			log.Printf("DeliveryPlanAdoption.length: %d", len(DeliveryPlanAdoption))
 			mu.Lock()
 			ioserv.BroadcastToAll("deliveryplanadoption", string(jsonBytes))
 			mu.Unlock()
 		} else {
 			log.Printf("proto.Unmarshal() failed: %s", err)
+			log.Printf("DeliveryPlanAdoption EventId failed: %d", work.EventId)
 		}
 	case "DeliveryPlanningResponse":
-		delivery_planning := &delivery_planning.DeliveryPlanningResponse{}
-		err := proto.Unmarshal(sp.Cdata.Entity, delivery_planning)
+		DeliveryPlanningResponse := &delivery_planning.DeliveryPlanningResponse{}
+		err := proto.Unmarshal(sp.Cdata.Entity, DeliveryPlanningResponse)
 		if err == nil {
-			jsonBytes, _ := json.Marshal(delivery_planning)
+			jsonBytes, _ := json.Marshal(DeliveryPlanningResponse)
 			log.Printf("DeliveryPlanningResponse: %v", string(jsonBytes))
 			mu.Lock()
 			ioserv.BroadcastToAll("deliveryplanningresponse", string(jsonBytes))
@@ -450,8 +541,10 @@ func main() {
 	serveMux.Handle("/socket.io/", ioserv)
 	serveMux.HandleFunc("/", assetsFileHandler)
 
-	if *https {
-		log.Printf("Starting Harmoware-VIS Provider %s  on port %d", version, *httpsport)
+	httplaunch := *httplaunch
+	fmt.Printf("https [%v] .\n", httplaunch)
+	if !httplaunch {
+		log.Printf("Starting Harmoware-VIS Provider https %s  on port %d", version, *httpsport)
 		err := http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%d", *httpsport), *sslcrt, *sslkey, serveMux)
 		if err != nil {
 			log.Fatal(err)

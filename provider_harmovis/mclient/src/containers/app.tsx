@@ -15,6 +15,7 @@ import { EvFleetSupply, VehicleList, DeliveryPlanningProvide, ChargingPlans,
 // for objMap.
 import {registerLoaders} from '@loaders.gl/core';
 import {OBJLoader} from '@loaders.gl/obj';
+import { CompositeLayer, LayerProps } from '@deck.gl/core';
 registerLoaders([OBJLoader]);
 const busmesh = './bus.obj';
 const busstopmesh = './busstop.obj';
@@ -224,7 +225,8 @@ class App extends Container<any,Partial<State>> {
 	setVehicleId (vehicle_id?:Readonly<number>):void {
 		if(this.deliveryplanningprovide.length > 0){
 			const filter_list = this.deliveryplanningprovide.filter(
-				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+				x=>x.module_id === this.module_id && x.provide_id === this.provide_id &&
+				x.Vehicle_assignate !== undefined)
 			if(filter_list.length > 0){
 				const vehicle_id_list:number[] = []
 				for (const element1 of filter_list){
@@ -302,7 +304,8 @@ class App extends Container<any,Partial<State>> {
 	setDeliveryPlanId (delivery_plan_id?:Readonly<number>):void {
 		if(this.deliveryplanningprovide.length > 0){
 			const filter_list = this.deliveryplanningprovide.filter(
-				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+				x=>x.module_id === this.module_id && x.provide_id === this.provide_id &&
+				x.Vehicle_assignate !== undefined && x.delivery_plan !== undefined)
 			if(filter_list.length > 0){
 				const delivery_plan_id_list:number[] = []
 				for (const element1 of filter_list){
@@ -351,7 +354,8 @@ class App extends Container<any,Partial<State>> {
 	setChargingPlanId (charging_plan_id?:Readonly<number>):void {
 		if(this.deliveryplanningprovide.length > 0){
 			const filter_list = this.deliveryplanningprovide.filter(
-				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+				x=>x.module_id === this.module_id && x.provide_id === this.provide_id &&
+				x.Vehicle_assignate !== undefined && x.charging_plan !== undefined)
 			if(filter_list.length > 0){
 				const charging_plan_id_list:number[] = []
 				for (const element1 of filter_list){
@@ -754,9 +758,11 @@ class App extends Container<any,Partial<State>> {
 				this.evfleetsupply[i].targetPosition = [json.longitude, json.latitude,0]
 				this.evfleetsupply[i].elapsedtime = Date.now()
 				this.evfleetsupply[i].direction = direction
+				this.evfleetsupply[i].soc = json.soc === undefined ? 0 : json.soc
+				this.evfleetsupply[i].soh = json.soh === undefined ? 0 : json.soh
 				this.evfleetsupply[i].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
 				const air_conditioner = ((this.evfleetsupply[i].air_conditioner > 0) ? '1:use':'0:not use')
-				this.evfleetsupply[i].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+json.soh+'\nair_conditioner:'+air_conditioner
+				this.evfleetsupply[i].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+(json.soh?json.soh:0)+'\nair_conditioner:'+air_conditioner
 				findIdx = i
 				break
 			}
@@ -769,9 +775,11 @@ class App extends Container<any,Partial<State>> {
 			this.evfleetsupply[findIdx].targetPosition = [json.longitude, json.latitude,0]
 			this.evfleetsupply[findIdx].elapsedtime = Date.now()
 			this.evfleetsupply[findIdx].direction = 0
+			this.evfleetsupply[findIdx].soc = json.soc === undefined ? 0 : json.soc
+			this.evfleetsupply[findIdx].soh = json.soh === undefined ? 0 : json.soh
 			this.evfleetsupply[findIdx].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
 			const air_conditioner = ((this.evfleetsupply[findIdx].air_conditioner > 0) ? '1:use':'0:not use')
-			this.evfleetsupply[findIdx].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+json.soh+'\nair_conditioner:'+air_conditioner
+			this.evfleetsupply[findIdx].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+(json.soh?json.soh:0)+'\nair_conditioner:'+air_conditioner
 		}
 		
 		findIdx = -1;
@@ -783,7 +791,7 @@ class App extends Container<any,Partial<State>> {
 					sourcePosition: [json.longitude, json.latitude,0],
 					targetPosition: [json.longitude, json.latitude,0],
 					color: ratecolor(json.soc),
-					width: (json.soh/10)
+					width: json.soh ? (json.soh/10) : 1
 				}
 				findIdx = i
 				break
@@ -800,7 +808,7 @@ class App extends Container<any,Partial<State>> {
 				sourcePosition: [json.longitude, json.latitude,0],
 				targetPosition: [json.longitude, json.latitude,0],
 				color: ratecolor(json.soc),
-				width: (json.soh/10)
+				width: json.soh ? (json.soh/10) : 1
 			})
 		}
 		this.setVehicleId_Ev()
@@ -839,7 +847,7 @@ class App extends Container<any,Partial<State>> {
 		for (let i = 0, lengthi = this.deliveryplanningprovide.length; i < lengthi; i=(i+1)|0) {
 			if(json.module_id === this.deliveryplanningprovide[i].module_id &&
 				json.provide_id === this.deliveryplanningprovide[i].provide_id){
-					this.deliveryplanningprovide[i] = {...json}
+					this.deliveryplanningprovide[i] = {...this.deliveryplanningprovide[i], ...json}
 				findIdx = i
 				break
 			}
@@ -993,7 +1001,7 @@ class App extends Container<any,Partial<State>> {
 	componentDidMount():void{
 		super.componentDidMount();
 		this.props.actions.setDefaultViewport({defaultZoom: 14.0, defaultPitch: 45})
-		this.props.actions.setViewport({longitude: 139.59955047063917, latitude: 35.44913331507205, zoom: 14.0, pitch: 45})
+		this.props.actions.setViewport({longitude: 139.6006878293355, latitude: 35.43397043859108, zoom: 13, pitch: 45})
 		Axios.get<string>(osmPath).then(res=>{
 			const readdata = xml2js(res.data,{compact: true}) as {osm?:any};
 			if(readdata.osm.way && readdata.osm.node){
@@ -1283,28 +1291,32 @@ class App extends Container<any,Partial<State>> {
 		}
 		if (this.evfleetroute.length > 0) {
 			for(const vehicle_id of this.vehicle_id_list){
-				const line_data = this.evfleetroute.find((x)=>x.vehicle_id === vehicle_id).line_data
-				const data = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
-				if (data.length > 0) {
-					layers.push(
-						new LineLayer({
-							id: 'evfleetroute-LineLayer-' + vehicle_id,
-							data,
-							pickable: true,
-							widthUnits: 'meters',
-							widthMinPixels: 0.1,
-							getSourcePosition: (x: any) => x.sourcePosition,
-							getTargetPosition: (x: any) => x.targetPosition,
-							getColor: (x: any) => x.color || [0,255,0,255],
-							getWidth: (x:any) => x.width || 5,
-							opacity: 0.8
-						  })
-					)
+				const target = this.evfleetroute.find((x)=>x.vehicle_id === vehicle_id)
+				if(target !== undefined){
+					const line_data = target.line_data
+					const data = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
+					if (data.length > 0) {
+						layers.push(
+							new LineLayer({
+								id: 'evfleetroute-LineLayer-' + vehicle_id,
+								data,
+								pickable: true,
+								widthUnits: 'meters',
+								widthMinPixels: 0.1,
+								getSourcePosition: (x: any) => x.sourcePosition,
+								getTargetPosition: (x: any) => x.targetPosition,
+								getColor: (x: any) => x.color || [0,255,0,255],
+								getWidth: (x:any) => x.width || 5,
+								opacity: 0.8
+							  })
+						)
+					}
 				}
 			}
 		}
 		if (this.deliveryplanningprovide.length > 0) {
-			const {deliveryplanningprovide,module_id,provide_id,vehicle_id,delivery_plan_id} = this
+			const {module_id,provide_id,vehicle_id,delivery_plan_id} = this
+			const deliveryplanningprovide = this.deliveryplanningprovide.filter((x)=>x.Vehicle_assignate !== undefined && x.delivery_plan !== undefined)
 			for (const element of deliveryplanningprovide){
 				if(module_id !== undefined && element.module_id === module_id &&
 					provide_id !== undefined && element.provide_id === provide_id && vehicle_id !== undefined){

@@ -148,6 +148,7 @@ export default class Controller extends React.Component<ControllerProps, {}> {
                 <NavigationButton buttonType='compass' actions={actions} viewport={viewport} className='btn btn-outline-light btn-sm w-100' />
               </div>
             </li>            
+            <li>ズームレベル：{viewport.zoom}</li>
 
             {false?
             <li>{/*<span>コントロールパネル</span>*/}

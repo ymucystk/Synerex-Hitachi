@@ -37,6 +37,7 @@ socket.on('mapbox_token', (payload: string) => {
 })
 
 function startRecivedData() {
+    console.log('start startRecivedData')
 
     socket.on('point', (str: string) => {
         const payload: any = JSON.parse(str);
@@ -173,4 +174,11 @@ function startRecivedData() {
             payload
         } as SocketMessage<any> );
     })
+
+    setTimeout(getSaveDataTransmissionRequest, 3000)
+}
+
+const getSaveDataTransmissionRequest = () => {
+    socket.emit('save_data_transmission_request', {})
+    console.log('Save data transmission request')
 }
