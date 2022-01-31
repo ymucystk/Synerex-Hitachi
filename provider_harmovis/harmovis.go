@@ -542,7 +542,7 @@ func main() {
 	serveMux.HandleFunc("/", assetsFileHandler)
 
 	httplaunch := *httplaunch
-	fmt.Printf("https [%v] .\n", httplaunch)
+	fmt.Printf("httplaunch [%v] .\n", httplaunch)
 	if !httplaunch {
 		log.Printf("Starting Harmoware-VIS Provider https %s  on port %d", version, *httpsport)
 		err := http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%d", *httpsport), *sslcrt, *sslkey, serveMux)
