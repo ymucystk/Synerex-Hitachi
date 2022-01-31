@@ -35,6 +35,27 @@ const delivery_time_table:string[] = [
 	'0 :','1 : 09:00 - 12:00','2 : 14:00 - 18:00','3 : 18:00 - 21:00'
 ]
 
+class _SimpleMeshLayer extends CompositeLayer<any>{
+	constructor(props:any){
+		super(props);
+	}
+	static layerName = '_SimpleMeshLayer';
+	renderLayers(){
+		const { cameraPosition } = this.context.viewport;
+		const {id,data,mesh,getPosition,getColor,getOrientation,getScale,
+			opacity,pickable,onHover,onClick} = this.props
+		const sizeScale = Math.min(cameraPosition[2] * 200,25)
+
+		return [new SimpleMeshLayer({
+			id:_SimpleMeshLayer.layerName+'-'+id,
+			data,mesh,sizeScale,
+			getPosition,getColor,getOrientation,getScale,
+			opacity,pickable,
+			onHover,onClick
+		})]
+	}
+}
+
 export interface State {
 	moveDataVisible: boolean,
 	moveOptionVisible: boolean,
@@ -1001,7 +1022,7 @@ class App extends Container<any,Partial<State>> {
 	componentDidMount():void{
 		super.componentDidMount();
 		this.props.actions.setDefaultViewport({defaultZoom: 14.0, defaultPitch: 45})
-		this.props.actions.setViewport({longitude: 139.6006878293355, latitude: 35.43397043859108, zoom: 13, pitch: 45})
+		this.props.actions.setViewport({longitude: 139.6006878293355, latitude: 35.43397043859108, zoom: 12, pitch: 45})
 		Axios.get<string>(osmPath).then(res=>{
 			const readdata = xml2js(res.data,{compact: true}) as {osm?:any};
 			if(readdata.osm.way && readdata.osm.node){
@@ -1261,11 +1282,10 @@ class App extends Container<any,Partial<State>> {
 				}
 			},[])
 			layers.push(
-				new SimpleMeshLayer({
+				new _SimpleMeshLayer({
 					id: 'evfleetsupply-layer',
 					data,
 					mesh: busmesh,
-					sizeScale: 10,
 					getPosition: (x:EvFleetSupply)=>x.position,
 					getColor: (x:EvFleetSupply)=>ratecolor(x.soc),
 					getOrientation: (x:EvFleetSupply) => x.direction ? [0,-x.direction,90] : [0,0,90],

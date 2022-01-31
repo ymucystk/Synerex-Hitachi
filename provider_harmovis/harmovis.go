@@ -26,23 +26,23 @@ import (
 // Harmoware Vis-Synerex wiht Layer extension provider provides map information to Web Service through socket.io.
 
 var (
-	nodesrv                 = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
-	assetDir                = flag.String("assetdir", "", "set Web client dir")
-	mapbox                  = flag.String("mapbox", "", "Set Mapbox access token")
-	port                    = flag.Int("port", 3030, "HarmoVis Ext Provider Listening Port")
-	httpsport               = flag.Int("httpsport", 443, "HarmoVis Ext Provider Listening httpsport")
-	httplaunch              = flag.Bool("httplaunch", false, "httplaunch")
-	sslcrt                  = flag.String("sslcrt", "./key/debug.crt", "sslcrt")
-	sslkey                  = flag.String("sslkey", "./key/debug.key", "sslkey")
-	mu                      = new(sync.Mutex)
-	version                 = "0.00"
+	nodesrv                 *string     = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
+	assetDir                *string     = flag.String("assetdir", "", "set Web client dir")
+	mapbox                  *string     = flag.String("mapbox", "", "Set Mapbox access token")
+	port                    *int        = flag.Int("port", 3030, "HarmoVis Ext Provider Listening Port")
+	httpsport               *int        = flag.Int("httpsport", 443, "HarmoVis Ext Provider Listening httpsport")
+	httplaunch              *bool       = flag.Bool("httplaunch", false, "httplaunch")
+	sslcrt                  *string     = flag.String("sslcrt", "./key/debug.crt", "sslcrt")
+	sslkey                  *string     = flag.String("sslkey", "./key/debug.key", "sslkey")
+	channelAlt              *int        = flag.Int("channelAlt", 1 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
+	channelEvfleet          *int        = flag.Int("channelEvfleet", 20, "channelEvfleet")
+	channelDp               *int        = flag.Int("channelDp", 21, "channelDp")
+	mu                      *sync.Mutex = new(sync.Mutex)
+	version                 string      = "0.00"
 	assetsDir               http.FileSystem
 	ioserv                  *gosocketio.Server
 	sxServerAddress         string
 	mapboxToken             string
-	channelAlt                                                         = flag.Int("channelAlt", 1 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
-	channelEvfleet                                                     = flag.Int("channelEvfleet", 20, "channelEvfleet")
-	channelDp                                                          = flag.Int("channelDp", 21, "channelDp")
 	DeliveryPlanningProvide []*dispatch.DeliveryPlanningProvide        = nil
 	DeliveryPlanningRequest *delivery_planning.DeliveryPlanningRequest = nil
 	DeliveryPlanAdoption    []*delivery_planning.DeliveryPlanAdoption  = nil
@@ -112,7 +112,7 @@ func run_server() *gosocketio.Server {
 
 	server.On("save_data_transmission_request", func(c *gosocketio.Channel) {
 		log.Printf("save_data_transmission_request")
-		if DeliveryPlanningProvide != nil {
+		{
 			for _, x := range DeliveryPlanningProvide {
 				DeliveryPlanningProvide_1 := &dispatch.DeliveryPlanningProvide{
 					EventId:      x.EventId,
@@ -133,20 +133,20 @@ func run_server() *gosocketio.Server {
 				}
 				jsonBytes_2, _ := json.Marshal(DeliveryPlanningProvide_2)
 				c.Emit("deliveryplanningprovide", string(jsonBytes_2))
+				log.Printf("response DeliveryPlanningProvide ModuleId:%d, ProvideId:%s", x.ModuleId, x.ProvideId)
 			}
-			log.Printf("response DeliveryPlanningProvide")
 		}
 		if DeliveryPlanningRequest != nil {
 			jsonBytes, _ := json.Marshal(DeliveryPlanningRequest)
 			c.Emit("deliveryplanningrequest", string(jsonBytes))
 			log.Printf("response DeliveryPlanningRequest")
 		}
-		if DeliveryPlanAdoption != nil {
+		{
 			for _, x := range DeliveryPlanAdoption {
 				jsonBytes, _ := json.Marshal(x)
 				c.Emit("deliveryplanadoption", string(jsonBytes))
+				log.Printf("response DeliveryPlanAdoption ModuleId:%d, ProvideId:%s", x.ModuleId, x.ProvideId)
 			}
-			log.Printf("response DeliveryPlanAdoption")
 		}
 	})
 
