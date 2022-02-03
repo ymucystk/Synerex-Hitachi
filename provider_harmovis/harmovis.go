@@ -19,6 +19,7 @@ import (
 	evfleet "github.com/smart_dispatch/evfleet/proto"
 	proto_alt_pt "github.com/synerex/proto_alt_pt"
 	synerexapi "github.com/synerex/synerex_api"
+	nodeapi "github.com/synerex/synerex_nodeapi"
 	synerexsxutil "github.com/synerex/synerex_sxutil"
 	"google.golang.org/protobuf/proto"
 )
@@ -27,6 +28,7 @@ import (
 
 var (
 	nodesrv                 *string     = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
+	cluster_id              *int        = flag.Int("cluster_id", 0, "ClusterId for The Synerex Server")
 	assetDir                *string     = flag.String("assetdir", "", "set Web client dir")
 	mapbox                  *string     = flag.String("mapbox", "", "Set Mapbox access token")
 	port                    *int        = flag.Int("port", 3030, "HarmoVis Ext Provider Listening Port")
@@ -34,9 +36,11 @@ var (
 	httplaunch              *bool       = flag.Bool("httplaunch", false, "httplaunch")
 	sslcrt                  *string     = flag.String("sslcrt", "./key/debug.crt", "sslcrt")
 	sslkey                  *string     = flag.String("sslkey", "./key/debug.key", "sslkey")
+	channel                 *int        = flag.Int("channel", 1, "Channel")
 	channelAlt              *int        = flag.Int("channelAlt", 1 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
 	channelEvfleet          *int        = flag.Int("channelEvfleet", 20, "channelEvfleet")
 	channelDp               *int        = flag.Int("channelDp", 21, "channelDp")
+	name                    *string     = flag.String("name", "HarmoVis", "Provider Name")
 	mu                      *sync.Mutex = new(sync.Mutex)
 	version                 string      = "0.00"
 	assetsDir               http.FileSystem
@@ -393,6 +397,63 @@ func supplyDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply)
 		} else {
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
+	case "DeliveryPlanAdoption":
+		//DeliveryPlanAdoption := &delivery_planning.DeliveryPlanAdoption{}
+		work := &delivery_planning.DeliveryPlanAdoption{}
+		err := proto.Unmarshal(sp.Cdata.Entity, work)
+		if err == nil && work.EventId == 3 {
+			findIdx := -1
+			for i, x := range DeliveryPlanAdoption {
+				if x.ModuleId == work.ModuleId && x.ProvideId == work.ProvideId {
+					findIdx = i
+					DeliveryPlanAdoption[findIdx] = work
+					break
+				}
+			}
+			if findIdx < 0 {
+				DeliveryPlanAdoption = append(DeliveryPlanAdoption, work)
+			}
+			jsonBytes, _ := json.Marshal(work)
+			log.Printf("DeliveryPlanAdoption: %v", string(jsonBytes))
+			log.Printf("DeliveryPlanAdoption.length: %d", len(DeliveryPlanAdoption))
+			mu.Lock()
+			ioserv.BroadcastToAll("deliveryplanadoption", string(jsonBytes))
+			mu.Unlock()
+		} else {
+			log.Printf("proto.Unmarshal() failed: %s", err)
+			log.Printf("DeliveryPlanAdoption EventId failed: %d", work.EventId)
+		}
+	case "DeliveryPlanningResponse":
+		DeliveryPlanningResponse := &delivery_planning.DeliveryPlanningResponse{}
+		err := proto.Unmarshal(sp.Cdata.Entity, DeliveryPlanningResponse)
+		if err == nil {
+			jsonBytes, _ := json.Marshal(DeliveryPlanningResponse)
+			log.Printf("DeliveryPlanningResponse: %v", string(jsonBytes))
+			mu.Lock()
+			ioserv.BroadcastToAll("deliveryplanningresponse", string(jsonBytes))
+			mu.Unlock()
+		} else {
+			log.Printf("proto.Unmarshal() failed: %s", err)
+		}
+	default:
+		log.Printf("supplyDpCallback receive Undefined SupplyName: %s", sp.SupplyName)
+	}
+}
+
+func demandDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Demand) {
+	switch sp.DemandName {
+	case "DispatchResponse":
+		DispatchResponse := &dispatch.DispatchResponse{}
+		err := proto.Unmarshal(sp.Cdata.Entity, DispatchResponse)
+		if err == nil {
+			jsonBytes, _ := json.Marshal(DispatchResponse)
+			log.Printf("DispatchResponse: %v", string(jsonBytes))
+			mu.Lock()
+			ioserv.BroadcastToAll("dispdispatchresponse", string(jsonBytes))
+			mu.Unlock()
+		} else {
+			log.Printf("proto.Unmarshal() failed: %s", err)
+		}
 	case "DeliveryPlanningRequest":
 		//DeliveryPlanningRequest := &delivery_planning.DeliveryPlanningRequest{}
 		work := &delivery_planning.DeliveryPlanningRequest{}
@@ -447,7 +508,7 @@ func supplyDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply)
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
 	default:
-		log.Printf("supplyDpCallback receive Undefined SupplyName: %s", sp.SupplyName)
+		log.Printf("demandDpCallback receive Undefined DemandName: %s", sp.DemandName)
 	}
 }
 
@@ -487,6 +548,18 @@ func subscribeDpSupply(client *synerexsxutil.SXServiceClient) {
 	}
 }
 
+func subscribeDpDemand(client *synerexsxutil.SXServiceClient) {
+	for {
+		log.Printf("subscribeDpDemand")
+		ctx := context.Background() //
+		err := client.SubscribeDemand(ctx, demandDpCallback)
+		log.Printf("Error:Demand %s\n", err.Error())
+		// we need to restart
+		reconnectClient(client)
+
+	}
+}
+
 func monitorStatus() {
 	for {
 		synerexsxutil.SetNodeStatus(int32(runtime.NumGoroutine()), "HV")
@@ -495,20 +568,24 @@ func monitorStatus() {
 }
 
 func main() {
-	name := "HarmoVis"
 	flag.Parse()
 
 	channelAlt := uint32(*channelAlt)
 	channelEvfleet := uint32(*channelEvfleet)
 	channelDp := uint32(*channelDp)
 
-	channelTypes := []uint32{channelAlt, channelEvfleet, channelDp} //チャンネルは借値
+	channelTypes := []uint32{uint32(*channel)}
+	sxo := &synerexsxutil.SxServerOpt{
+		NodeType:  nodeapi.NodeType_PROVIDER,
+		ClusterId: int32(*cluster_id),
+		AreaId:    "Default",
+	}
 	var rerr error
-	sxServerAddress, rerr = synerexsxutil.RegisterNode(*nodesrv, name, channelTypes, nil)
+	sxServerAddress, rerr = synerexsxutil.RegisterNode(*nodesrv, *name, channelTypes, sxo)
 	if rerr != nil {
 		log.Fatal("Can't register node ", rerr)
 	}
-	log.Printf("Connectin SynerexServer at [%s]\n", sxServerAddress)
+	log.Printf("register SynerexServer at [%s]\n", sxServerAddress)
 
 	go synerexsxutil.HandleSigInt()
 	synerexsxutil.RegisterDeferFunction(synerexsxutil.UnRegisterNode)
@@ -524,15 +601,17 @@ func main() {
 	client := synerexsxutil.GrpcConnectServer(sxServerAddress) // if there is server address change, we should do it!
 	log.Printf("Connecting SynerexServer at [%s]\n", sxServerAddress)
 
-	alt_client := synerexsxutil.NewSXServiceClient(client, channelAlt, name)
-	evfleet_client := synerexsxutil.NewSXServiceClient(client, channelEvfleet, name) //チャンネルは借値
-	dp_client := synerexsxutil.NewSXServiceClient(client, channelDp, name)           //チャンネルは借値
+	argJson := "{Client:Event}"
+	alt_client := synerexsxutil.NewSXServiceClient(client, channelAlt, argJson)
+	evfleet_client := synerexsxutil.NewSXServiceClient(client, channelEvfleet, argJson) //チャンネルは借値
+	dp_client := synerexsxutil.NewSXServiceClient(client, channelDp, argJson)           //チャンネルは借値
 
 	wg.Add(1)
 
 	go subscribeAltSupply(alt_client)
 	go subscribeEvfleetSupply(evfleet_client)
 	go subscribeDpSupply(dp_client)
+	go subscribeDpDemand(dp_client)
 
 	go monitorStatus() // keep status
 

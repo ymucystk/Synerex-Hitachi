@@ -1380,13 +1380,15 @@ class App extends Container<any,Partial<State>> {
 									const selectData = packages_info_list.filter(x=>x.package_id === delivery_packages_info.package_id)
 									for(const package_info of selectData){
 										const {longitude, latitude, delivery_time, ...other} = package_info
+										const text = 'package_id:'+package_info.package_id+'\nweight:'+package_info.weight+'\ndelivery_time:'+delivery_time_table[delivery_time]
 										delivery_point_data.push({
 											...other,
 											position:[longitude, latitude],
 											delivery_time: delivery_time_table[delivery_time],
 											estimated_time_of_arrival: delivery_packages_info.estimated_time_of_arrival,
 											color: ratecolor(delivery_time*33),
-											message: 'DeliveryPlanningRequest'
+											message: 'DeliveryPlanningRequest',
+											text
 										})
 									}
 								}
@@ -1397,7 +1399,7 @@ class App extends Container<any,Partial<State>> {
 								id: 'delivery-point-layer',
 								data: delivery_point_data,
 								mesh: busstopmesh,
-								sizeScale: 30,
+								sizeScale: 50,
 								getPosition: (x:any)=>x.position,
 								getColor: (x:any)=>x.color,
 								getScale: (x:any)=>[1,1,x.weight],
@@ -1405,6 +1407,18 @@ class App extends Container<any,Partial<State>> {
 								pickable: true,
 								onHover,
 								onClick
+							} as any)
+						)
+						layers.push(
+							new TextLayer({
+								id: 'delivery-point-text-layer',
+								data: delivery_point_data,
+								getPosition: (x:any)=>x.position,
+								getColor: (x:any)=>x.color,
+								getTextAnchor: 'start',
+								getSize: 12,
+								fontWeight: 80,
+								getPixelOffset: [20,-30]
 							} as any)
 						)
 					}
