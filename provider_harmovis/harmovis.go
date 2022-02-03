@@ -590,8 +590,6 @@ func main() {
 	go synerexsxutil.HandleSigInt()
 	synerexsxutil.RegisterDeferFunction(synerexsxutil.UnRegisterNode)
 
-	wg := sync.WaitGroup{} // for syncing other goroutines
-
 	ioserv = run_server()
 	fmt.Printf("Running HarmoVis Server.\n")
 	if ioserv == nil {
@@ -605,8 +603,6 @@ func main() {
 	alt_client := synerexsxutil.NewSXServiceClient(client, channelAlt, argJson)
 	evfleet_client := synerexsxutil.NewSXServiceClient(client, channelEvfleet, argJson) //チャンネルは借値
 	dp_client := synerexsxutil.NewSXServiceClient(client, channelDp, argJson)           //チャンネルは借値
-
-	wg.Add(1)
 
 	go subscribeAltSupply(alt_client)
 	go subscribeEvfleetSupply(evfleet_client)
@@ -635,7 +631,4 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	wg.Wait()
-
 }
