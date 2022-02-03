@@ -1303,9 +1303,9 @@ class App extends Container<any,Partial<State>> {
 					getPosition: (x:EvFleetSupply)=>x.position,
 					getColor: (x:EvFleetSupply)=>ratecolor(x.soc),
 					getTextAnchor: 'start',
-					getSize: 15,
-					fontWeight: 100,
-					getPixelOffset: [30,-50]
+					getSize: 13,
+					fontWeight: 80,
+					getPixelOffset: [20,-30]
 				} as any)
 			)
 		}
@@ -1416,7 +1416,7 @@ class App extends Container<any,Partial<State>> {
 								getPosition: (x:any)=>x.position,
 								getColor: (x:any)=>x.color,
 								getTextAnchor: 'start',
-								getSize: 12,
+								getSize: 13,
 								fontWeight: 80,
 								getPixelOffset: [20,-30]
 							} as any)
