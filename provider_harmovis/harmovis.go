@@ -50,6 +50,7 @@ var (
 	DeliveryPlanningProvide []*dispatch.DeliveryPlanningProvide        = nil
 	DeliveryPlanningRequest *delivery_planning.DeliveryPlanningRequest = nil
 	DeliveryPlanAdoption    []*delivery_planning.DeliveryPlanAdoption  = nil
+	VehicleList             []*evfleet.VehicleList                     = nil
 )
 
 // assetsFileHandler for static Data
@@ -116,6 +117,18 @@ func run_server() *gosocketio.Server {
 
 	server.On("save_data_transmission_request", func(c *gosocketio.Channel) {
 		log.Printf("save_data_transmission_request")
+		if DeliveryPlanningRequest != nil {
+			jsonBytes, _ := json.Marshal(DeliveryPlanningRequest)
+			c.Emit("deliveryplanningrequest", string(jsonBytes))
+			log.Printf("response DeliveryPlanningRequest")
+		}
+		{
+			for _, x := range VehicleList {
+				jsonBytes, _ := json.Marshal(x)
+				c.Emit("vehiclelist", string(jsonBytes))
+				log.Printf("response VehicleList ModuleId:%d, ProvideId:%s", x.ModuleId, x.ProvideId)
+			}
+		}
 		{
 			for _, x := range DeliveryPlanningProvide {
 				DeliveryPlanningProvide_1 := &dispatch.DeliveryPlanningProvide{
@@ -139,11 +152,6 @@ func run_server() *gosocketio.Server {
 				c.Emit("deliveryplanningprovide", string(jsonBytes_2))
 				log.Printf("response DeliveryPlanningProvide ModuleId:%d, ProvideId:%s", x.ModuleId, x.ProvideId)
 			}
-		}
-		if DeliveryPlanningRequest != nil {
-			jsonBytes, _ := json.Marshal(DeliveryPlanningRequest)
-			c.Emit("deliveryplanningrequest", string(jsonBytes))
-			log.Printf("response DeliveryPlanningRequest")
 		}
 		{
 			for _, x := range DeliveryPlanAdoption {
@@ -312,11 +320,23 @@ func supplyEvfleetCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Su
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
 	case "VehicleList":
-		VehicleList := &evfleet.VehicleList{}
-		err := proto.Unmarshal(sp.Cdata.Entity, VehicleList)
+		work := &evfleet.VehicleList{}
+		err := proto.Unmarshal(sp.Cdata.Entity, work)
 		if err == nil {
-			jsonBytes, _ := json.Marshal(VehicleList)
+			findIdx := -1
+			for i, x := range VehicleList {
+				if x.ModuleId == work.ModuleId && x.ProvideId == work.ProvideId {
+					findIdx = i
+					VehicleList[findIdx] = work
+					break
+				}
+			}
+			if findIdx < 0 {
+				VehicleList = append(VehicleList, work)
+			}
+			jsonBytes, _ := json.Marshal(work)
 			log.Printf("VehicleList: %v", string(jsonBytes))
+			log.Printf("VehicleList.length: %d", len(VehicleList))
 			mu.Lock()
 			ioserv.BroadcastToAll("vehiclelist", string(jsonBytes))
 			mu.Unlock()
@@ -397,32 +417,6 @@ func supplyDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply)
 		} else {
 			log.Printf("proto.Unmarshal() failed: %s", err)
 		}
-	case "DeliveryPlanAdoption":
-		//DeliveryPlanAdoption := &delivery_planning.DeliveryPlanAdoption{}
-		work := &delivery_planning.DeliveryPlanAdoption{}
-		err := proto.Unmarshal(sp.Cdata.Entity, work)
-		if err == nil && work.EventId == 3 {
-			findIdx := -1
-			for i, x := range DeliveryPlanAdoption {
-				if x.ModuleId == work.ModuleId && x.ProvideId == work.ProvideId {
-					findIdx = i
-					DeliveryPlanAdoption[findIdx] = work
-					break
-				}
-			}
-			if findIdx < 0 {
-				DeliveryPlanAdoption = append(DeliveryPlanAdoption, work)
-			}
-			jsonBytes, _ := json.Marshal(work)
-			log.Printf("DeliveryPlanAdoption: %v", string(jsonBytes))
-			log.Printf("DeliveryPlanAdoption.length: %d", len(DeliveryPlanAdoption))
-			mu.Lock()
-			ioserv.BroadcastToAll("deliveryplanadoption", string(jsonBytes))
-			mu.Unlock()
-		} else {
-			log.Printf("proto.Unmarshal() failed: %s", err)
-			log.Printf("DeliveryPlanAdoption EventId failed: %d", work.EventId)
-		}
 	case "DeliveryPlanningResponse":
 		DeliveryPlanningResponse := &delivery_planning.DeliveryPlanningResponse{}
 		err := proto.Unmarshal(sp.Cdata.Entity, DeliveryPlanningResponse)
@@ -469,6 +463,25 @@ func demandDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Demand)
 			log.Printf("proto.Unmarshal() failed: %s", err)
 			log.Printf("DeliveryPlanningRequest ModuleId failed: %d", work.EventId)
 		}
+	case "DeliveryPlanningResponse":
+		DeliveryPlanningResponse := &delivery_planning.DeliveryPlanningResponse{}
+		err := proto.Unmarshal(sp.Cdata.Entity, DeliveryPlanningResponse)
+		if err == nil {
+			jsonBytes, _ := json.Marshal(DeliveryPlanningResponse)
+			log.Printf("DeliveryPlanningResponse: %v", string(jsonBytes))
+			mu.Lock()
+			ioserv.BroadcastToAll("deliveryplanningresponse", string(jsonBytes))
+			mu.Unlock()
+		} else {
+			log.Printf("proto.Unmarshal() failed: %s", err)
+		}
+	default:
+		log.Printf("demandDpCallback receive Undefined DemandName: %s", sp.DemandName)
+	}
+}
+
+func supplyAdoptionCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Supply) {
+	switch sp.SupplyName {
 	case "DeliveryPlanAdoption":
 		//DeliveryPlanAdoption := &delivery_planning.DeliveryPlanAdoption{}
 		work := &delivery_planning.DeliveryPlanAdoption{}
@@ -495,20 +508,8 @@ func demandDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Demand)
 			log.Printf("proto.Unmarshal() failed: %s", err)
 			log.Printf("DeliveryPlanAdoption EventId failed: %d", work.EventId)
 		}
-	case "DeliveryPlanningResponse":
-		DeliveryPlanningResponse := &delivery_planning.DeliveryPlanningResponse{}
-		err := proto.Unmarshal(sp.Cdata.Entity, DeliveryPlanningResponse)
-		if err == nil {
-			jsonBytes, _ := json.Marshal(DeliveryPlanningResponse)
-			log.Printf("DeliveryPlanningResponse: %v", string(jsonBytes))
-			mu.Lock()
-			ioserv.BroadcastToAll("deliveryplanningresponse", string(jsonBytes))
-			mu.Unlock()
-		} else {
-			log.Printf("proto.Unmarshal() failed: %s", err)
-		}
 	default:
-		log.Printf("demandDpCallback receive Undefined DemandName: %s", sp.DemandName)
+		log.Printf("supplyAdoptionCallback receive Undefined SupplyName: %s", sp.SupplyName)
 	}
 }
 
@@ -548,6 +549,18 @@ func subscribeDpSupply(client *synerexsxutil.SXServiceClient) {
 	}
 }
 
+func subscribeAdoptionSupply(client *synerexsxutil.SXServiceClient) {
+	for {
+		log.Printf("subscribeAdoptionSupply")
+		ctx := context.Background() //
+		err := client.SubscribeSupply(ctx, supplyAdoptionCallback)
+		log.Printf("Error:Supply %s\n", err.Error())
+		// we need to restart
+		reconnectClient(client)
+
+	}
+}
+
 func subscribeDpDemand(client *synerexsxutil.SXServiceClient) {
 	for {
 		log.Printf("subscribeDpDemand")
@@ -573,6 +586,7 @@ func main() {
 	channelAlt := uint32(*channelAlt)
 	channelEvfleet := uint32(*channelEvfleet)
 	channelDp := uint32(*channelDp)
+	channeladoption := uint32(23)
 
 	channelTypes := []uint32{uint32(*channel)}
 	sxo := &synerexsxutil.SxServerOpt{
@@ -601,13 +615,15 @@ func main() {
 
 	argJson := "{Client:Event}"
 	alt_client := synerexsxutil.NewSXServiceClient(client, channelAlt, argJson)
-	evfleet_client := synerexsxutil.NewSXServiceClient(client, channelEvfleet, argJson) //チャンネルは借値
-	dp_client := synerexsxutil.NewSXServiceClient(client, channelDp, argJson)           //チャンネルは借値
+	evfleet_client := synerexsxutil.NewSXServiceClient(client, channelEvfleet, argJson)   //チャンネルは借値
+	dp_client := synerexsxutil.NewSXServiceClient(client, channelDp, argJson)             //チャンネルは借値
+	adoption_client := synerexsxutil.NewSXServiceClient(client, channeladoption, argJson) //チャンネルは借値
 
 	go subscribeAltSupply(alt_client)
 	go subscribeEvfleetSupply(evfleet_client)
 	go subscribeDpSupply(dp_client)
 	go subscribeDpDemand(dp_client)
+	go subscribeAdoptionSupply(adoption_client)
 
 	go monitorStatus() // keep status
 

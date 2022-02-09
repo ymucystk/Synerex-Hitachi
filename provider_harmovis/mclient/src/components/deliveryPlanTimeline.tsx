@@ -66,7 +66,7 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
       const Date2 = Date1
       Date2.setMinutes(Date2.getMinutes() + 1)
       deliverytimelineData.push([
-        '配送計画ID : '+delivery_plan_id,
+        '配送提案ID : '+delivery_plan_id,
         'パッケージID : '+packages_info.package_id,
         Date1, Date2
       ])
@@ -74,19 +74,10 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
     if(deliveryplanningrequest !== undefined && deliveryplanningrequest.target_info &&
       deliveryplanningrequest.target_info.start_delivery_time && deliveryplanningrequest.target_info.end_delivery_time){
       const { start_delivery_time,end_delivery_time } = deliveryplanningrequest.target_info
-      const Date1 = stringToDate(start_delivery_time)
-      Date1.setMinutes(Date1.getMinutes() - 1)
-      const Date2 = stringToDate(end_delivery_time)
-      Date2.setMinutes(Date2.getMinutes() + 1)
       deliverytimelineData.unshift([
-        '配送計画ID : '+delivery_plan_id,
-        '配送開始',
-        Date1, stringToDate(start_delivery_time)
-      ])
-      deliverytimelineData.push([
-        '配送計画ID : '+delivery_plan_id,
-        '配送終了',
-        stringToDate(end_delivery_time), Date2
+        '配送仕様','',
+        stringToDate(start_delivery_time),
+        stringToDate(end_delivery_time)
       ])
     }
     const chargingtimelineData:any[] = charging_plan_list.map((charging_plan)=>{

@@ -1,6 +1,7 @@
 import React from 'react'
 import { ArcLayer, PathLayer, TextLayer, LineLayer } from 'deck.gl';
 import { SimpleMeshLayer } from '@deck.gl/mesh-layers';
+import { PathStyleExtension } from '@deck.gl/extensions';
 import Axios from 'axios';
 import { xml2js } from 'xml-js';
 import { Container, connectToHarmowareVis, HarmoVisLayers,
@@ -16,6 +17,9 @@ import { EvFleetSupply, VehicleList, DeliveryPlanningProvide, ChargingPlans,
 import {registerLoaders} from '@loaders.gl/core';
 import {OBJLoader} from '@loaders.gl/obj';
 import { CompositeLayer, LayerProps } from '@deck.gl/core';
+
+const extensions = [new PathStyleExtension({dash:true})];
+
 registerLoaders([OBJLoader]);
 const busmesh = './bus.obj';
 const busstopmesh = './busstop.obj';
@@ -29,10 +33,14 @@ interface PathData { path:number[][], color?:number[], width?:number,
 	vehicle_id:number, delivery_plan_id:number, message:string, charging_plans?: ChargingPlans[], }
 
 interface LineData { vehicle_id:number, message:string,
-	line_data:{sourcePosition:[number,number,number], targetPosition:[number,number,number], color?:number[], width?:number}[] }
+	line_data:{sourcePosition:[number,number,number], targetPosition:[number,number,number], soc?:number, soh?:number,}[] }
 	
 const delivery_time_table:string[] = [
 	'0 :','1 : 09:00 - 12:00','2 : 14:00 - 18:00','3 : 18:00 - 21:00'
+]
+
+const route_line_color = [
+	[255,0,255,255],[0,255,0,255],[255,0,0,255],[255,255,0,255],[0,0,255,255]
 ]
 
 class _SimpleMeshLayer extends CompositeLayer<any>{
@@ -779,11 +787,6 @@ class App extends Container<any,Partial<State>> {
 				this.evfleetsupply[i].targetPosition = [json.longitude, json.latitude,0]
 				this.evfleetsupply[i].elapsedtime = Date.now()
 				this.evfleetsupply[i].direction = direction
-				this.evfleetsupply[i].soc = json.soc === undefined ? 0 : json.soc
-				this.evfleetsupply[i].soh = json.soh === undefined ? 0 : json.soh
-				this.evfleetsupply[i].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
-				const air_conditioner = ((this.evfleetsupply[i].air_conditioner > 0) ? '1:use':'0:not use')
-				this.evfleetsupply[i].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+(json.soh?json.soh:0)+'\nair_conditioner:'+air_conditioner
 				findIdx = i
 				break
 			}
@@ -796,11 +799,6 @@ class App extends Container<any,Partial<State>> {
 			this.evfleetsupply[findIdx].targetPosition = [json.longitude, json.latitude,0]
 			this.evfleetsupply[findIdx].elapsedtime = Date.now()
 			this.evfleetsupply[findIdx].direction = 0
-			this.evfleetsupply[findIdx].soc = json.soc === undefined ? 0 : json.soc
-			this.evfleetsupply[findIdx].soh = json.soh === undefined ? 0 : json.soh
-			this.evfleetsupply[findIdx].air_conditioner = json.air_conditioner === undefined ? 0 : json.air_conditioner
-			const air_conditioner = ((this.evfleetsupply[findIdx].air_conditioner > 0) ? '1:use':'0:not use')
-			this.evfleetsupply[findIdx].text = 'vehicle_id:'+json.vehicle_id+'\nsoc:'+json.soc+'  soh:'+(json.soh?json.soh:0)+'\nair_conditioner:'+air_conditioner
 		}
 		
 		findIdx = -1;
@@ -811,8 +809,8 @@ class App extends Container<any,Partial<State>> {
 				this.evfleetroute[i].line_data[dataLength] = {
 					sourcePosition: [json.longitude, json.latitude,0],
 					targetPosition: [json.longitude, json.latitude,0],
-					color: ratecolor(json.soc),
-					width: json.soh ? (json.soh/10) : 1
+					soc: json.soc,
+					soh: json.soh,
 				}
 				findIdx = i
 				break
@@ -828,8 +826,8 @@ class App extends Container<any,Partial<State>> {
 			this.evfleetroute[findIdx].line_data.push({
 				sourcePosition: [json.longitude, json.latitude,0],
 				targetPosition: [json.longitude, json.latitude,0],
-				color: ratecolor(json.soc),
-				width: json.soh ? (json.soh/10) : 1
+				soc: json.soc,
+				soh: json.soh,
 			})
 		}
 		this.setVehicleId_Ev()
@@ -1258,14 +1256,36 @@ class App extends Container<any,Partial<State>> {
 				} as any)
 			)
 		}
+		let vehiclelist:VehicleList = undefined
+		if(this.module_id != undefined && this.provide_id != undefined){
+			vehiclelist = this.vehiclelist.find(x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
+		}
 		if (this.evfleetsupply.length > 0) {
-			const data:EvFleetSupply[] = this.evfleetsupply.reduce((data:EvFleetSupply[],current:EvFleetSupply)=>{
+			const evfleetsupply = this.evfleetsupply.map(x=>{return {...x}})
+			const data:EvFleetSupply[] = evfleetsupply.reduce((data:EvFleetSupply[],current:EvFleetSupply)=>{
+				if(vehiclelist !== undefined && current.vehicle_id !== undefined){
+					const vehicle_list = vehiclelist.vehicle_list.find(x=>x.vehicle_id === current.vehicle_id)
+					if(vehicle_list !== undefined){
+						if(current.soc === undefined){
+							current.soc = vehicle_list.soc === undefined ? 0 : vehicle_list.soc
+						}
+						if(current.soh === undefined){
+							current.soh = vehicle_list.soh === undefined ? 0 : vehicle_list.soh
+						}
+						if(current.air_conditioner === undefined){
+							current.air_conditioner = vehicle_list.air_conditioner === undefined ? 0 : vehicle_list.air_conditioner
+						}
+					}
+				}
+				current.soc = current.soc === undefined ? 0 : current.soc
+				current.soh = current.soh === undefined ? 0 : current.soh
+				current.air_conditioner = current.air_conditioner === undefined ? 0 : current.air_conditioner
+				const air_conditioner = ((current.air_conditioner > 0) ? '1:use':'0:not use')
+				current.text = 'vehicle_id:'+current.vehicle_id+'\nsoc:'+current.soc+'% soh:'+current.soh+'%\nair_conditioner:'+air_conditioner
 				if(current.targetPosition[0] === current.sourcePosition[0] &&
 					current.targetPosition[1] === current.sourcePosition[1] &&
 					current.targetPosition[2] === current.sourcePosition[2]){
 					current.position = [...current.targetPosition]
-					data.push(current)
-					return data
 				}else{
 					const now = Date.now()
 					const difference = now - current.elapsedtime
@@ -1277,9 +1297,9 @@ class App extends Container<any,Partial<State>> {
 					}else{
 						current.position = [...current.targetPosition]
 					}
-					data.push(current)
-					return data
 				}
+				data.push(current)
+				return data
 			},[])
 			layers.push(
 				new _SimpleMeshLayer({
@@ -1314,8 +1334,26 @@ class App extends Container<any,Partial<State>> {
 				const target = this.evfleetroute.find((x)=>x.vehicle_id === vehicle_id)
 				if(target !== undefined){
 					const line_data = target.line_data
-					const data = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
-					if (data.length > 0) {
+					const filterdata = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
+					if (filterdata.length > 0) {
+						const data = filterdata.map(x=>{
+							let {soc,soh} = x
+							if(vehiclelist !== undefined){
+								const vehicle_list = vehiclelist.vehicle_list.find(x=>x.vehicle_id === vehicle_id)
+								if(vehicle_list !== undefined){
+									if(soc === undefined){
+										soc = vehicle_list.soc === undefined ? 0 : vehicle_list.soc
+									}
+									if(soh === undefined){
+										soh = vehicle_list.soh === undefined ? 0 : vehicle_list.soh
+									}
+								}
+							}else{
+								soc = soc === undefined ? 0 : soc
+								soh = soh === undefined ? 0 : soh
+							}
+							return{...x,soc,soh} 
+						})
 						layers.push(
 							new LineLayer({
 								id: 'evfleetroute-LineLayer-' + vehicle_id,
@@ -1325,8 +1363,8 @@ class App extends Container<any,Partial<State>> {
 								widthMinPixels: 0.1,
 								getSourcePosition: (x: any) => x.sourcePosition,
 								getTargetPosition: (x: any) => x.targetPosition,
-								getColor: (x: any) => x.color || [0,255,0,255],
-								getWidth: (x:any) => x.width || 5,
+								getColor: (x: any) => ratecolor(x.soc),
+								getWidth: (x:any) => x.soh ? (x.soh/10) : 1,
 								opacity: 0.8
 							  })
 						)
@@ -1345,6 +1383,7 @@ class App extends Container<any,Partial<State>> {
 					if(findIndex < 0){
 						break
 					}
+					const adoption = this.deliveryplanadoption.find(x=>x.module_id === module_id && x.provide_id === provide_id)
 					//delivery_plan_id_list
 					const { route_info, charging_plans } = element.Vehicle_assignate[findIndex]
 					const data:PathData[] = []
@@ -1352,6 +1391,7 @@ class App extends Container<any,Partial<State>> {
 					for (const {longitude,latitude} of route_info){
 						path.push([longitude, latitude])
 					}
+					const module_color = route_line_color[(module_id%5)]
 					data.push({path:path, vehicle_id, delivery_plan_id, charging_plans, message:"VehicleRouteLayer"})
 					layers.push( new PathLayer({
 						id: 'VehicleRouteLayer',
@@ -1364,10 +1404,12 @@ class App extends Container<any,Partial<State>> {
 						capRounded: true,
 						jointRounded: true,
 						getPath: (x:PathData) => x.path,
-						getColor: (x:PathData) => x.color || [0,255,0,255],
+						getColor: (x:PathData) => x.color || module_color,
 						getWidth: (x:PathData) => x.width || 10,
 						onHover,
-						onClick
+						onClick,
+						getDashArray: adoption === undefined ? [10,10] : [0,0],
+						extensions
 					} as any))
 					if(element.delivery_plan && this.deliveryplanningrequest && this.deliveryplanningrequest.delivery_info &&
 						this.deliveryplanningrequest.delivery_info.packages_info){
@@ -1512,6 +1554,7 @@ class App extends Container<any,Partial<State>> {
 					getDeliveryPlanIdSelected={this.getDeliveryPlanIdSelected.bind(this)}
 					getChargingPlanIdSelected={this.getChargingPlanIdSelected.bind(this)}
 					deliveryplanningrequest={this.deliveryplanningrequest}
+					deliveryplanningprovide={this.deliveryplanningprovide}
 					deliveryplanadoption={this.deliveryplanadoption}
 					/>
 					<div className='harmovis_gauge'>
@@ -1521,6 +1564,7 @@ class App extends Container<any,Partial<State>> {
 							<EvFleetSupplyChart
 							vehicle_id={this.vehicle_id}
 							evfleetsupply={this.evfleetsupply}
+							vehiclelist={this.vehiclelist.find(x=>x.module_id===this.module_id && x.provide_id===this.provide_id)}
 							/>
 							</li>
 						</ul>

@@ -8,6 +8,7 @@ interface Props {
   options?: any,
   vehicle_id: number,
   evfleetsupply: EvFleetSupply[]
+  vehiclelist: any
 }
 export default class EvFleetSupplyChart extends React.Component<Props> {
   render() {
@@ -33,7 +34,8 @@ class _EvFleetSupplyChart extends React.Component<Props> {
   }
 
   render() {
-    const {width,height,vehicle_id,evfleetsupply,options} = this.props
+    const {width,height,vehicle_id,evfleetsupply:_evfleetsupply,options,vehiclelist} = this.props
+    const evfleetsupply = _evfleetsupply.map(x=>{return {...x}})
     let dspData:EvFleetSupply = undefined
     for (let i = 0, lengthi = evfleetsupply.length; i < lengthi; i=(i+1)|0) {
         if(vehicle_id === evfleetsupply[i].vehicle_id){
@@ -42,6 +44,29 @@ class _EvFleetSupplyChart extends React.Component<Props> {
         }
     }
     if(dspData !== undefined){
+      if(vehiclelist!==undefined){
+        const vehicle_list = vehiclelist.vehicle_list.find((x:any)=>x.vehicle_id===dspData.vehicle_id)
+        if(vehicle_list!==undefined){
+          if(dspData.soc === undefined){
+            dspData.soc = vehicle_list.soc
+          }
+          if(dspData.soh === undefined){
+            dspData.soh = vehicle_list.soh
+          }
+          if(dspData.air_conditioner === undefined){
+            dspData.air_conditioner = vehicle_list.air_conditioner
+          }
+        }
+      }
+      if(dspData.soc === undefined){
+        dspData.soc = 0
+      }
+      if(dspData.soh === undefined){
+        dspData.soh = 0
+      }
+      if(dspData.air_conditioner === undefined){
+        dspData.air_conditioner = 0
+      }
       const gaugedata = [['Label', 'Value'],['SOC', dspData.soc],['SOH', dspData.soh]]
       const setOptions = Object.assign({},default_options,options)
       return (

@@ -114,3 +114,10 @@ declare module "frappe-gantt" {
     constructor(wrapper:any, tasks:any[], options?:object);
   }
 }
+
+declare module "@deck.gl/extensions" {
+
+  class PathStyleExtension {
+    constructor(props: any);
+  }
+}

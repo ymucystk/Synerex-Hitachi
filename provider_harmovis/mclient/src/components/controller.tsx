@@ -8,7 +8,7 @@ import { ic_delete as icDelete } from 'react-icons-kit/md'
 import OsmInput from './xml-input'
 import MovesInput from './moves-input'
 import ChartComponent from './chartComponent'
-import { DeliveryPlanningRequest, DeliveryPlanAdoption } from '../@types'
+import { DeliveryPlanningRequest, DeliveryPlanningProvide, DeliveryPlanAdoption } from '../@types'
 
 const stringToDate = (strDate:string)=>{
   if(strDate.length === 14){
@@ -61,6 +61,7 @@ interface ControllerProps {
   getDeliveryPlanIdSelected: any,
   getChargingPlanIdSelected: any,
   deliveryplanningrequest: DeliveryPlanningRequest,
+  deliveryplanningprovide: DeliveryPlanningProvide[],
   deliveryplanadoption: DeliveryPlanAdoption[]
 }
 
@@ -92,10 +93,12 @@ export default class Controller extends React.Component<ControllerProps, {}> {
       module_id_list, provide_id_list, vehicle_id_list, inputFileName, viewport, getOsmData, chartData,
       getModuleIdSelected, getProvideIdSelected, getVehicleIdSelected,
       delivery_plan_id, charging_plan_id, delivery_plan_id_list, charging_plan_id_list,
-      getDeliveryPlanIdSelected, getChargingPlanIdSelected, deliveryplanningrequest, deliveryplanadoption
+      getDeliveryPlanIdSelected, getChargingPlanIdSelected, deliveryplanningrequest,
+      deliveryplanningprovide:deliveryplanningprovideList, deliveryplanadoption
     } = this.props
 
     const { movesFileName, osmDataFileName } = inputFileName
+    const deliveryplanningprovide = deliveryplanningprovideList.find((x=>x.module_id === module_id && x.provide_id === provide_id))
 
     return (<>
       <div className='harmovis_controller'>
@@ -186,14 +189,19 @@ export default class Controller extends React.Component<ControllerProps, {}> {
             </li>:null}
             {deliveryplanningrequest && deliveryplanningrequest.target_info ?<>
             <li>
-              <p>最大車両:{deliveryplanningrequest.target_info.max_vehicle_unit}</p>
-              <p>配送開始:{stringToDate(deliveryplanningrequest.target_info.start_delivery_time)}</p>
-              <p>配送終了:{stringToDate(deliveryplanningrequest.target_info.end_delivery_time)}</p>
-            </li>
-            </>:null}
-            {deliveryplanningrequest && deliveryplanningrequest.delivery_info ?<>
-            <li>
-              <p>配送パッケージ数:{deliveryplanningrequest.delivery_info.packages_info.length}</p>
+              <p>最大車両:&nbsp;{deliveryplanningrequest.target_info.max_vehicle_unit}</p>
+              <p>配送開始:&nbsp;{stringToDate(deliveryplanningrequest.target_info.start_delivery_time)}</p>
+              <p>配送終了:&nbsp;{stringToDate(deliveryplanningrequest.target_info.end_delivery_time)}</p>
+              {deliveryplanningrequest && deliveryplanningrequest.delivery_info ?<>
+                  <p>配送パッケージ数:&nbsp;{deliveryplanningrequest.delivery_info.packages_info.length}</p>
+              </>:null}
+              {deliveryplanningprovide !== undefined ?<>
+              <p>配送プラン数(delivery_plan):&nbsp;{deliveryplanningprovide.delivery_plan.length}</p>
+              <p>充電プラン数(charging_plan):&nbsp;{deliveryplanningprovide.charging_plan.length}</p>
+              </>:null}
+              {(module_id_list.length > 0 && provide_id_list.length > 0)?<>
+                <p>配送計画採用状況:{deliveryplanadoption.findIndex(x=>x.module_id === module_id && x.provide_id === provide_id) < 0?'未採用':'採用'}</p>
+              </>:null}
             </li>
             </>:null}
             {module_id_list.length > 0?
@@ -214,11 +222,6 @@ export default class Controller extends React.Component<ControllerProps, {}> {
                 </select>
               </div>
             </li>:null}
-            {(module_id_list.length > 0 && provide_id_list.length > 0)?<>
-              <li>
-                <p>配送計画採用状況:{deliveryplanadoption.findIndex(x=>x.module_id === module_id && x.provide_id === provide_id) < 0?'未採用':'採用'}</p>
-              </li>
-            </>:null}
             {vehicle_id_list.length > 0?
             <li>
               <div className="form-select" title='車両(vehicle_id)選択'>
