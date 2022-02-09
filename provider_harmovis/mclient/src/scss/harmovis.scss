@@ -127,7 +127,7 @@ div.harmovis_schedule {
   @extend .harmovis_information;
   z-index: 110; 
   color: black;
-  bottom: 100px; 
+  bottom: 20px; 
   left: 20px;
   width: 70%;
   ul {
@@ -247,7 +247,7 @@ div.harmovis_fpsRate {
   font-size: 8pt; 
   z-index: 105; 
   position: fixed; 
-  bottom: 50px; 
+  bottom: 40px; 
   right: 20px;
   display: block;
   span {

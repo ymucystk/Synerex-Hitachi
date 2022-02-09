@@ -40,6 +40,12 @@ const stringToDate = (strDate:string)=>{
   }
   return new Date()
 }
+const editCaption = (startDate:string,endDate:string)=>{
+  if(startDate.length === 14 && endDate.length === 14){
+    return `${startDate.substring(8, 10)}:${startDate.substring(10, 12)} ～ ${endDate.substring(8, 10)}:${endDate.substring(10, 12)}`
+  }
+  return ''
+}
 
 class _DeliveryPlanTimeline extends React.Component<Props> {
 
@@ -75,7 +81,7 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
       deliveryplanningrequest.target_info.start_delivery_time && deliveryplanningrequest.target_info.end_delivery_time){
       const { start_delivery_time,end_delivery_time } = deliveryplanningrequest.target_info
       deliverytimelineData.unshift([
-        '配送仕様','',
+        '配送仕様',editCaption(start_delivery_time,end_delivery_time),
         stringToDate(start_delivery_time),
         stringToDate(end_delivery_time)
       ])
