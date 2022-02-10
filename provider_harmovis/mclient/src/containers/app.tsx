@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArcLayer, PathLayer, TextLayer, LineLayer } from 'deck.gl';
+import { ArcLayer, PathLayer, TextLayer, LineLayer, ScatterplotLayer } from 'deck.gl';
 import { SimpleMeshLayer } from '@deck.gl/mesh-layers';
 import { PathStyleExtension } from '@deck.gl/extensions';
 import Axios from 'axios';
@@ -37,6 +37,10 @@ interface LineData { vehicle_id:number, message:string,
 	
 const delivery_time_table:string[] = [
 	'0 :','1 : 09:00 - 12:00','2 : 14:00 - 18:00','3 : 18:00 - 21:00'
+]
+
+const delivery_time_color:number[][] = [
+	[255,0,0,255],[0,255,255,255],[0,255,0,255],[0,0,255,255],
 ]
 
 const route_line_color = [
@@ -1120,11 +1124,35 @@ class App extends Container<any,Partial<State>> {
 					}
 				}
 			}else{
-				const objctlist = Object.entries(el.object);
-				for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
-					const strvalue = objctlist[i][1].toString();
-					disptext = disptext + (i > 0 ? '\n' : '');
-					disptext = disptext + (`${objctlist[i][0]}: ${strvalue}`);
+				if (el.layer && el.layer.id && el.layer.id === 'packages_info_ScatterplotLayer'){
+					const objctlist:[string, any][] = Object.entries(el.object);
+					for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
+						let name:string = ''
+						let value:string = ''
+						if(objctlist[i][0] === 'package_id'){
+							name = 'パッケージID'
+							value = objctlist[i][1].toString()
+						}else
+						if(objctlist[i][0] === 'weight'){
+							name = '重量'
+							value = objctlist[i][1].toString()+'(kg)'
+						}else
+						if(objctlist[i][0] === 'delivery_time'){
+							name = '配送希望時間'
+							value = delivery_time_table[objctlist[i][1]]
+						}
+						if(name.length > 0){
+							disptext = disptext + (i > 0 ? '\n' : '');
+							disptext = disptext + (`${name} : ${value}`);
+						}
+					}
+				}else{
+					const objctlist = Object.entries(el.object);
+					for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
+						const strvalue = objctlist[i][1].toString();
+						disptext = disptext + (i > 0 ? '\n' : '');
+						disptext = disptext + (`${objctlist[i][0]}: ${strvalue}`);
+					}
 				}
 			}
 			this.setState({ popup: [el.x, el.y, disptext] });
@@ -1371,6 +1399,23 @@ class App extends Container<any,Partial<State>> {
 					}
 				}
 			}
+		}
+		if (this.deliveryplanningrequest && this.deliveryplanningrequest.delivery_info && this.deliveryplanningrequest.delivery_info.packages_info) {
+			const packages_info = this.deliveryplanningrequest.delivery_info.packages_info.filter(x=>x.latitude && x.longitude)
+			type PackageInfo = typeof packages_info[0]
+			layers.push( new ScatterplotLayer({
+				id: 'packages_info_ScatterplotLayer',
+				data: packages_info,
+				radiusScale: 10,
+				getPosition:(x: PackageInfo) => [x.longitude, x.latitude, 0],
+				getFillColor:(x: PackageInfo) => delivery_time_color[x.delivery_time],
+				getRadius:(x: PackageInfo) => x.weight,
+				visible:true,
+				opacity: 1.0,
+				pickable:true,
+				radiusMinPixels: 1,
+				onHover:onHover as any,
+			}))
 		}
 		if (this.deliveryplanningprovide.length > 0) {
 			const {module_id,provide_id,vehicle_id,delivery_plan_id} = this
