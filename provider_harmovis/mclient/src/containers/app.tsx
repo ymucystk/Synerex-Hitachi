@@ -1442,7 +1442,7 @@ class App extends Container<any,Partial<State>> {
 						id: 'VehicleRouteLayer',
 						data,
 						visible:true,
-						opacity: 1.0,
+						opacity: adoption === undefined ? 0.7 : 1.0,
 						pickable:true,
 						widthUnits: 'meters',
 						widthMinPixels: 1,
@@ -1450,10 +1450,10 @@ class App extends Container<any,Partial<State>> {
 						jointRounded: true,
 						getPath: (x:PathData) => x.path,
 						getColor: (x:PathData) => x.color || module_color,
-						getWidth: (x:PathData) => x.width || 10,
+						getWidth: (x:PathData) => x.width || (adoption === undefined ? 7 : 10),
 						onHover,
 						onClick,
-						getDashArray: adoption === undefined ? [10,10] : [0,0],
+						getDashArray: adoption === undefined ? [5,5] : [0,0],
 						extensions
 					} as any))
 					if(element.delivery_plan && this.deliveryplanningrequest && this.deliveryplanningrequest.delivery_info &&

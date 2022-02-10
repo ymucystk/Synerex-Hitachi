@@ -40,6 +40,7 @@ var (
 	channelAlt              *int        = flag.Int("channelAlt", 1 /*int(pbase.ALT_PT_SVC)*/, "channelAlt")
 	channelEvfleet          *int        = flag.Int("channelEvfleet", 20, "channelEvfleet")
 	channelDp               *int        = flag.Int("channelDp", 21, "channelDp")
+	channeladoption         *int        = flag.Int("channeladoption", 23, "channeladoption")
 	name                    *string     = flag.String("name", "HarmoVis", "Provider Name")
 	mu                      *sync.Mutex = new(sync.Mutex)
 	version                 string      = "0.00"
@@ -586,7 +587,7 @@ func main() {
 	channelAlt := uint32(*channelAlt)
 	channelEvfleet := uint32(*channelEvfleet)
 	channelDp := uint32(*channelDp)
-	channeladoption := uint32(23)
+	channeladoption := uint32(*channeladoption)
 
 	channelTypes := []uint32{uint32(*channel)}
 	sxo := &synerexsxutil.SxServerOpt{
