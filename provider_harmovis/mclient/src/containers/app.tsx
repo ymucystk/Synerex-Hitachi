@@ -1434,7 +1434,7 @@ class App extends Container<any,Partial<State>> {
 					const data:PathData[] = []
 					const path:number[][] = []
 					for (const {longitude,latitude} of route_info){
-						path.push([longitude, latitude])
+						path.push([longitude, latitude, 10])
 					}
 					const module_color = route_line_color[(module_id%5)]
 					data.push({path:path, vehicle_id, delivery_plan_id, charging_plans, message:"VehicleRouteLayer"})
@@ -1473,7 +1473,7 @@ class App extends Container<any,Partial<State>> {
 											position:[longitude, latitude],
 											delivery_time: delivery_time_table[delivery_time],
 											estimated_time_of_arrival: delivery_packages_info.estimated_time_of_arrival,
-											color: ratecolor(delivery_time*33),
+											color: delivery_time_color[delivery_time],
 											message: 'DeliveryPlanningRequest',
 											text
 										})
