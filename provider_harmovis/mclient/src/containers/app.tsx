@@ -1023,7 +1023,7 @@ class App extends Container<any,Partial<State>> {
 
 	componentDidMount():void{
 		super.componentDidMount();
-		this.props.actions.setDefaultViewport({defaultZoom: 14.0, defaultPitch: 45})
+		this.props.actions.setDefaultViewport({defaultZoom: 12.0, defaultPitch: 45})
 		this.props.actions.setViewport({longitude: 139.6006878293355, latitude: 35.43397043859108, zoom: 12, pitch: 45})
 		Axios.get<string>(osmPath).then(res=>{
 			const readdata = xml2js(res.data,{compact: true}) as {osm?:any};

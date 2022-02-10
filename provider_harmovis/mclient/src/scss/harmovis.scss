@@ -110,9 +110,9 @@ div.harmovis_controller{
 }
 div.harmovis_gauge {
   @extend .harmovis_information;
-  bottom: 80px; 
-  right: 20px;
-  width: 300px;
+  top: 10px; 
+  left: 10px;
+  width: 280px;
   p{
     margin: 0px
   }
