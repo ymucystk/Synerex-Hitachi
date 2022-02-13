@@ -157,6 +157,7 @@ class App extends Container<any,Partial<State>> {
 		this.vehicle_id = undefined
 		this.delivery_plan_id = undefined
 		this.charging_plan_id = undefined
+		this.plan_list = []
 		this.module_id_list = []
 		this.provide_id_list = []
 		this.vehicle_id_list = []
@@ -178,6 +179,7 @@ class App extends Container<any,Partial<State>> {
 	vehicle_id: number
 	delivery_plan_id: number
 	charging_plan_id: number
+	plan_list: {name:string,value:{module_id:number,provide_id:string}}[]
 	module_id_list: number[]
 	provide_id_list: string[]
 	vehicle_id_list: number[]
@@ -192,7 +194,7 @@ class App extends Container<any,Partial<State>> {
 	deliveryplanadoption: DeliveryPlanAdoption[]
 	deliveryplanningprovide: DeliveryPlanningProvide[]
 
-	setModuleId (module_id?:Readonly<number>):void {
+	setModuleId (module_id?:Readonly<number>,provide_id?:Readonly<string>):void {
 		if(this.deliveryplanningprovide.length > 0){
 			const module_id_list:number[] = []
 			for (const element of this.deliveryplanningprovide){
@@ -219,7 +221,11 @@ class App extends Container<any,Partial<State>> {
 					this.module_id = module_id
 				}
 			}
-			this.setProvideId()
+			if(provide_id === undefined){
+				this.setProvideId()
+			}else{
+				this.setProvideId(provide_id)
+			}
 		}
 	}
 	setProvideId (provide_id?:Readonly<string>):void {
@@ -879,6 +885,9 @@ class App extends Container<any,Partial<State>> {
 			findIdx = this.deliveryplanningprovide.length
 			this.deliveryplanningprovide[findIdx] = {...json}
 		}
+		this.plan_list = this.deliveryplanningprovide.map(x=>{
+			return {name:`${x.module_id}-${x.provide_id}`,value:{module_id:x.module_id,provide_id:x.provide_id}}
+		})
 		this.setModuleId()
 	}
 
@@ -892,6 +901,10 @@ class App extends Container<any,Partial<State>> {
 			return
 		}
 		this.deliveryplanningrequest = {...json}
+		this.vehiclelist = []
+		this.deliveryplanningprovide = []
+		this.plan_list = []
+		this.deliveryplanadoption = []
 	}
 
 	getDeliveryPlanAdoption (json :DeliveryPlanAdoption):void {
@@ -940,6 +953,13 @@ class App extends Container<any,Partial<State>> {
 		this.setState({ moveOptionVisible: e.target.checked })
 	}
 
+	
+	getplanSelected (e :any):void {
+		const {module_id,provide_id} = e.target.value as {module_id:number,provide_id:string}
+		if(this.module_id != module_id || this.provide_id != provide_id){
+			this.setModuleId(module_id, provide_id)
+		}
+	}
 	getModuleIdSelected (e :any):void {
 		if(this.module_id != +e.target.value){
 			this.setModuleId(+e.target.value)
@@ -1388,11 +1408,11 @@ class App extends Container<any,Partial<State>> {
 								data,
 								pickable: true,
 								widthUnits: 'meters',
-								widthMinPixels: 0.1,
+								widthMinPixels: 1,
 								getSourcePosition: (x: any) => x.sourcePosition,
 								getTargetPosition: (x: any) => x.targetPosition,
 								getColor: (x: any) => ratecolor(x.soc),
-								getWidth: (x:any) => x.soh ? (x.soh/10) : 1,
+								getWidth: (x:any) => x.soh ? ((100 - x.soh)/10) : 1,
 								opacity: 0.8
 							  })
 						)
