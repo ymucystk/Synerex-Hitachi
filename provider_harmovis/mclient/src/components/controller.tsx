@@ -8,7 +8,7 @@ import { ic_delete as icDelete } from 'react-icons-kit/md'
 import OsmInput from './xml-input'
 import MovesInput from './moves-input'
 import ChartComponent from './chartComponent'
-import { DeliveryPlanningRequest, DeliveryPlanningProvide, DeliveryPlanAdoption } from '../@types'
+import { DeliveryPlanningRequest, DeliveryPlanningProvide, DeliveryPlanAdoption, PlanList } from '../@types'
 
 const stringToDate = (strDate:string)=>{
   if(strDate.length === 14){
@@ -45,6 +45,11 @@ interface ControllerProps {
   ExtractedData: any,
   movesBaseLoad: Function,
   chartData: any,
+  display_mode: string,
+  display_mode_list: string[],
+  getDisplayModeSelected: any, 
+  plan_list: PlanList[]
+  getplanSelected: any,
 	module_id:number,
 	provide_id:string,
   vehicle_id: number,
@@ -89,13 +94,9 @@ export default class Controller extends React.Component<ControllerProps, {}> {
 
   render () {
     const { settime, timeBegin, leading, timeLength, actions, secperhour, animatePause, animateReverse,
-      getMoveDataChecked, getMoveOptionChecked, module_id, provide_id, vehicle_id,
-      module_id_list, provide_id_list, vehicle_id_list, inputFileName, viewport, getOsmData, chartData,
-      getModuleIdSelected, getProvideIdSelected, getVehicleIdSelected,
-      delivery_plan_id, charging_plan_id, delivery_plan_id_list, charging_plan_id_list,
-      getDeliveryPlanIdSelected, getChargingPlanIdSelected, deliveryplanningrequest,
-      deliveryplanningprovide:deliveryplanningprovideList, deliveryplanadoption
-    } = this.props
+      getMoveDataChecked, getMoveOptionChecked, display_mode, display_mode_list, getDisplayModeSelected,
+      module_id, provide_id, module_id_list, provide_id_list, inputFileName, viewport, getOsmData, chartData,
+      deliveryplanningrequest, deliveryplanningprovide:deliveryplanningprovideList, deliveryplanadoption } = this.props
 
     const { movesFileName, osmDataFileName } = inputFileName
     const deliveryplanningprovide = deliveryplanningprovideList.find((x=>x.module_id === module_id && x.provide_id === provide_id))
@@ -169,6 +170,14 @@ export default class Controller extends React.Component<ControllerProps, {}> {
             <li>
               日時&nbsp;<SimulationDateTime settime={settime} />
             </li>
+            <li>
+              <div className="form-select" title='表示モード選択'>
+                <label htmlFor="DisplayModeSelected" className="form-select-label">表示モード選択</label>
+                <select id="DisplayModeSelected" value={display_mode} onChange={getDisplayModeSelected} >
+                {display_mode_list.map(x=><option value={x} key={x}>{x}</option>)}
+                </select>
+              </div>
+            </li>
             {false?
             <li>
             <label htmlFor='ElapsedTimeRange'>経過時間<ElapsedTimeValue settime={settime} timeBegin={timeBegin} timeLength={Math.floor(timeLength)} actions={actions} />/&nbsp;{Math.floor(timeLength)}&nbsp;秒</label>
@@ -204,51 +213,7 @@ export default class Controller extends React.Component<ControllerProps, {}> {
               </>:null}
             </li>
             </>:null}
-            {module_id_list.length > 0?
-            <li>
-              <div className="form-select" title='Dispatcher識別(module_id)選択'>
-                <label htmlFor="ModuleIdSelect" className="form-select-label">Dispatcher識別(module_id)選択</label>
-                <select id="ModuleIdSelect" value={module_id} onChange={getModuleIdSelected} >
-                {module_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-                </select>
-              </div>
-            </li>:null}
-            {provide_id_list.length > 0?
-            <li>
-              <div className="form-select" title='配送計画(provide_id)選択'>
-                <label htmlFor="ProvideIdSelect" className="form-select-label">配送計画(provide_id)選択</label>
-                <select id="ProvideIdSelect" value={provide_id} onChange={getProvideIdSelected} >
-                {provide_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-                </select>
-              </div>
-            </li>:null}
-            {vehicle_id_list.length > 0?
-            <li>
-              <div className="form-select" title='車両(vehicle_id)選択'>
-                <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
-                <select id="VehicleIdSelect" value={vehicle_id} onChange={getVehicleIdSelected} >
-                {vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-                </select>
-              </div>
-            </li>:null}
-            {delivery_plan_id_list.length > 0?
-            <li>
-              <div className="form-select" title='配送計画ID(delivery_plan_id)選択'>
-                <label htmlFor="deliveryPlanIdSelect" className="form-select-label">配送計画ID(delivery_plan_id)選択</label>
-                <select id="deliveryPlanIdSelect" value={delivery_plan_id} onChange={getDeliveryPlanIdSelected} >
-                {delivery_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-                </select>
-              </div>
-            </li>:null}
-            {charging_plan_id_list.length > 0?
-            <li>
-              <div className="form-select" title='充電計画ID(charging_plan_id)選択'>
-                <label htmlFor="chargingPlanIdSelect" className="form-select-label">充電計画ID(charging_plan_id)選択</label>
-                <select id="chargingPlanIdSelect" value={charging_plan_id} onChange={getChargingPlanIdSelected} >
-                {charging_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-                </select>
-              </div>
-            </li>:null}
+            {display_mode==='vehicle' ? <VehicleMode {...this.props} /> : <></>}
           </ul>
         </div>
       </div>
@@ -261,6 +226,87 @@ export default class Controller extends React.Component<ControllerProps, {}> {
           </ul>
         </div>
       </div>
+      </>
+    )
+  }
+}
+
+interface ControllerState {
+  plan_index:number
+}
+
+class VehicleMode extends React.Component<ControllerProps, ControllerState> {
+  constructor (props:ControllerProps) {
+      super(props)
+      this.state = {
+        plan_index:0
+      }
+  }
+
+  getplanSelected(e:any):void{
+    this.props.getplanSelected(e)
+    this.setState({plan_index:+e.target.value})
+  }
+
+  render () {
+    const { plan_list, vehicle_id, vehicle_id_list, getVehicleIdSelected,
+      charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected } = this.props
+
+    return (<>
+        {plan_list.length > 0?
+        <li>
+          <div className="form-select" title='プラン選択'>
+            <label htmlFor="planSelected" className="form-select-label">プラン選択</label>
+            <select id="planSelected" value={this.state.plan_index} onChange={this.getplanSelected.bind(this)} >
+            {plan_list.map(x=><option value={x.index} key={x.index}>{x.name}</option>)}
+            </select>
+          </div>
+        </li>:null}
+        {/*{module_id_list.length > 0?
+        <li>
+          <div className="form-select" title='Dispatcher識別(module_id)選択'>
+            <label htmlFor="ModuleIdSelect" className="form-select-label">Dispatcher識別(module_id)選択</label>
+            <select id="ModuleIdSelect" value={module_id} onChange={getModuleIdSelected} >
+            {module_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+            </select>
+          </div>
+        </li>:null}*/}
+        {/*{provide_id_list.length > 0?
+        <li>
+          <div className="form-select" title='配送計画(provide_id)選択'>
+            <label htmlFor="ProvideIdSelect" className="form-select-label">配送計画(provide_id)選択</label>
+            <select id="ProvideIdSelect" value={provide_id} onChange={getProvideIdSelected} >
+            {provide_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+            </select>
+          </div>
+        </li>:null}*/}
+        {vehicle_id_list.length > 0?
+        <li>
+          <div className="form-select" title='車両(vehicle_id)選択'>
+            <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
+            <select id="VehicleIdSelect" value={vehicle_id} onChange={getVehicleIdSelected} >
+            {vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+            </select>
+          </div>
+        </li>:null}
+        {/*{delivery_plan_id_list.length > 0?
+        <li>
+          <div className="form-select" title='配送計画ID(delivery_plan_id)選択'>
+            <label htmlFor="deliveryPlanIdSelect" className="form-select-label">配送計画ID(delivery_plan_id)選択</label>
+            <select id="deliveryPlanIdSelect" value={delivery_plan_id} onChange={getDeliveryPlanIdSelected} >
+            {delivery_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+            </select>
+          </div>
+        </li>:null}*/}
+        {charging_plan_id_list.length > 0?
+        <li>
+          <div className="form-select" title='充電計画ID(charging_plan_id)選択'>
+            <label htmlFor="chargingPlanIdSelect" className="form-select-label">充電計画ID(charging_plan_id)選択</label>
+            <select id="chargingPlanIdSelect" value={charging_plan_id} onChange={getChargingPlanIdSelected} >
+            {charging_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+            </select>
+          </div>
+        </li>:null}
       </>
     )
   }

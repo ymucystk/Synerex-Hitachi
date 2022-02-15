@@ -114,3 +114,10 @@ export interface VehicleList {
     provide_id?: string,
     vehicle_list?: Vehicle[],   //MAX 10
 }
+
+export interface PlanList {
+    name:string,
+    index:number,
+    module_id:number,
+    provide_id:string
+}

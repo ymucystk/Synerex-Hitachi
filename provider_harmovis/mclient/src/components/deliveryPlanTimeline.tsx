@@ -63,6 +63,11 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
     options: {}
   }
 
+  listExpansion(id: string){
+    let obj=document.getElementById(id).style;
+    obj.display=(obj.display==='none')?'block':'none';
+  }
+
   render() {
     const {delivery_plan_id,packages_info_list,charging_plan_list,
       deliveryplanningrequest,width,height,columnDef,rows,options} = this.props
@@ -118,9 +123,14 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
       const setOptions = Object.assign({},default_options,options)
       return (
         <>
-        <div style={default_style}>
-          <Chart width={width} height={setHeight} data={data} options={setOptions}  chartType="Timeline" />
-        </div>
+        <span onClick={this.listExpansion.bind(this,'expand1')} >
+          <a style={{'cursor':'pointer'}} >表示切替スイッチ</a>
+        </span>
+        <span id="expand1" style={{'display': 'block','clear': 'both'}}>
+          <div style={default_style}>
+            <Chart width={width} height={setHeight} data={data} options={setOptions}  chartType="Timeline" />
+          </div>
+        </span>
         </>
       );
     }else{

@@ -10,7 +10,7 @@ import { Container, connectToHarmowareVis, HarmoVisLayers,
 import Controller from '../components/controller'
 import EvFleetSupplyChart from '../components/EvFleetSupplyChart'
 import DeliveryPlanTimeline from '../components/deliveryPlanTimeline'
-import { EvFleetSupply, VehicleList, DeliveryPlanningProvide, ChargingPlans,
+import { EvFleetSupply, VehicleList, DeliveryPlanningProvide, ChargingPlans, PlanList,
 	DeliveryPlanningRequest, DeliveryPlanAdoption, PackagePlan, ChargingPlan } from '../@types'
 
 // for objMap.
@@ -44,7 +44,7 @@ const delivery_time_color:number[][] = [
 ]
 
 const route_line_color = [
-	[255,0,255,255],[0,255,0,255],[255,0,0,255],[255,255,0,255],[0,0,255,255]
+	[0,255,0,255],[255,0,0,255],[255,255,0,255],[0,0,255,255],[255,0,255,255],
 ]
 
 class _SimpleMeshLayer extends CompositeLayer<any>{
@@ -152,6 +152,8 @@ class App extends Container<any,Partial<State>> {
 			chartData: undefined,
 		}
 		this.movesbase = []
+		this.display_mode = 'vehicle'
+		this.display_mode_list = ['plan','vehicle',]
 		this.module_id = undefined
 		this.provide_id = undefined
 		this.vehicle_id = undefined
@@ -174,12 +176,14 @@ class App extends Container<any,Partial<State>> {
 	}
 	movesbase:any[]
 	canvas: HTMLCanvasElement
+	display_mode:string
+	display_mode_list:string[]
 	module_id:number
 	provide_id:string
 	vehicle_id: number
 	delivery_plan_id: number
 	charging_plan_id: number
-	plan_list: {name:string,value:{module_id:number,provide_id:string}}[]
+	plan_list: PlanList[]
 	module_id_list: number[]
 	provide_id_list: string[]
 	vehicle_id_list: number[]
@@ -885,8 +889,8 @@ class App extends Container<any,Partial<State>> {
 			findIdx = this.deliveryplanningprovide.length
 			this.deliveryplanningprovide[findIdx] = {...json}
 		}
-		this.plan_list = this.deliveryplanningprovide.map(x=>{
-			return {name:`${x.module_id}-${x.provide_id}`,value:{module_id:x.module_id,provide_id:x.provide_id}}
+		this.plan_list = this.deliveryplanningprovide.map((x,index)=>{
+			return {name:`${x.module_id}-${x.provide_id}`,index,module_id:x.module_id,provide_id:x.provide_id}
 		})
 		this.setModuleId()
 	}
@@ -954,8 +958,13 @@ class App extends Container<any,Partial<State>> {
 	}
 
 	
+	getDisplayModeSelected (e :any):void {
+		if(this.display_mode != e.target.value){
+			this.display_mode = e.target.value
+		}
+	}
 	getplanSelected (e :any):void {
-		const {module_id,provide_id} = e.target.value as {module_id:number,provide_id:string}
+		const {module_id, provide_id} = this.plan_list[+e.target.value]
 		if(this.module_id != module_id || this.provide_id != provide_id){
 			this.setModuleId(module_id, provide_id)
 		}
@@ -1438,9 +1447,49 @@ class App extends Container<any,Partial<State>> {
 			}))
 		}
 		if (this.deliveryplanningprovide.length > 0) {
-			const {module_id,provide_id,vehicle_id,delivery_plan_id} = this
+			const {display_mode, module_id,provide_id,vehicle_id,delivery_plan_id} = this
 			const deliveryplanningprovide = this.deliveryplanningprovide.filter((x)=>x.Vehicle_assignate !== undefined && x.delivery_plan !== undefined)
 			for (const element of deliveryplanningprovide){
+				if(display_mode === 'plan' && module_id !== undefined && provide_id !== undefined){
+					for (let i = 0, lengthi = this.plan_list.length; i < lengthi; i=(i+1)|0) {
+						const {module_id:pl_module_id,provide_id:pl_provide_id} = this.plan_list[i]
+						if(element.module_id === pl_module_id && element.provide_id === pl_provide_id){
+							const module_color = route_line_color[i%5]
+							for (const Vehicle_assignate of element.Vehicle_assignate){
+								const { vehicle_id:va_vehicle_id, delivery_plan_id:va_delivery_plan_id, route_info, charging_plans } = Vehicle_assignate
+								const data:PathData[] = []
+								const path:number[][] = []
+								for (const {longitude,latitude} of route_info){
+									path.push([longitude, latitude, 10])
+								}
+								data.push({path:path, vehicle_id:va_vehicle_id, delivery_plan_id:va_delivery_plan_id,
+									charging_plans, message:"VehicleRouteLayer"})
+								layers.push( new PathLayer({
+									id: 'VehicleRouteLayer',
+									data,
+									visible:true,
+									opacity: 1.0,
+									pickable:true,
+									widthUnits: 'meters',
+									widthMinPixels: 1,
+									capRounded: true,
+									jointRounded: true,
+									getPath: (x:PathData) => x.path,
+									getColor: (x:PathData) => x.color || module_color,
+									getWidth: (x:PathData) => x.width || 10,
+									onHover,
+									onClick,
+									getDashArray: [0,0],
+									extensions
+								} as any))
+							}
+						}
+					}
+
+
+
+					
+				}else
 				if(module_id !== undefined && element.module_id === module_id &&
 					provide_id !== undefined && element.provide_id === provide_id && vehicle_id !== undefined){
 	
@@ -1456,7 +1505,8 @@ class App extends Container<any,Partial<State>> {
 					for (const {longitude,latitude} of route_info){
 						path.push([longitude, latitude, 10])
 					}
-					const module_color = route_line_color[(module_id%5)]
+					const findPlan = this.plan_list.findIndex(x=>x.module_id===module_id && x.provide_id===provide_id)
+					const module_color = route_line_color[(findPlan%5)]
 					data.push({path:path, vehicle_id, delivery_plan_id, charging_plans, message:"VehicleRouteLayer"})
 					layers.push( new PathLayer({
 						id: 'VehicleRouteLayer',
@@ -1603,6 +1653,11 @@ class App extends Container<any,Partial<State>> {
 					getOsmData={this.getOsmData.bind(this)}
 					movesBaseLoad={this.movesBaseLoad.bind(this)}
 					chartData={this.state.chartData}
+					display_mode={this.display_mode}
+					display_mode_list={this.display_mode_list}
+					getDisplayModeSelected={this.getDisplayModeSelected.bind(this)}
+					plan_list={this.plan_list}
+					getplanSelected={this.getplanSelected.bind(this)}
 					module_id={this.module_id}
 					provide_id={this.provide_id}
 					vehicle_id={this.vehicle_id}

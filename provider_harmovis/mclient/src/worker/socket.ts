@@ -175,7 +175,7 @@ function startRecivedData() {
         } as SocketMessage<any> );
     })
 
-    setTimeout(getSaveDataTransmissionRequest, 3000)
+    setTimeout(getSaveDataTransmissionRequest, 5000)
 }
 
 const getSaveDataTransmissionRequest = () => {
