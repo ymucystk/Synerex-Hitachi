@@ -8,6 +8,8 @@ import { ic_delete as icDelete } from 'react-icons-kit/md'
 import OsmInput from './xml-input'
 import MovesInput from './moves-input'
 import ChartComponent from './chartComponent'
+import RadioButtons from './radiobuttons'
+import {route_line_color,rgbStrChg} from '../containers/app'
 import { DeliveryPlanningRequest, DeliveryPlanningProvide, DeliveryPlanAdoption, PlanList } from '../@types'
 
 const stringToDate = (strDate:string)=>{
@@ -46,8 +48,9 @@ interface ControllerProps {
   movesBaseLoad: Function,
   chartData: any,
   display_mode: string,
-  display_mode_list: string[],
+  display_mode_list: {value:string,caption:string}[],
   getDisplayModeSelected: any, 
+  plan_index:number
   plan_list: PlanList[]
   getplanSelected: any,
 	module_id:number,
@@ -174,7 +177,7 @@ export default class Controller extends React.Component<ControllerProps, {}> {
               <div className="form-select" title='表示モード選択'>
                 <label htmlFor="DisplayModeSelected" className="form-select-label">表示モード選択</label>
                 <select id="DisplayModeSelected" value={display_mode} onChange={getDisplayModeSelected} >
-                {display_mode_list.map(x=><option value={x} key={x}>{x}</option>)}
+                {display_mode_list.map(x=><option value={x.value} key={x.value}>{x.caption}</option>)}
                 </select>
               </div>
             </li>
@@ -213,7 +216,7 @@ export default class Controller extends React.Component<ControllerProps, {}> {
               </>:null}
             </li>
             </>:null}
-            {display_mode==='vehicle' ? <VehicleMode {...this.props} /> : <></>}
+            {display_mode==='vehicle' ? <VehicleMode {...this.props} /> : <><PlanMode {...this.props} /></>}
           </ul>
         </div>
       </div>
@@ -231,25 +234,13 @@ export default class Controller extends React.Component<ControllerProps, {}> {
   }
 }
 
-interface ControllerState {
-  plan_index:number
-}
-
-class VehicleMode extends React.Component<ControllerProps, ControllerState> {
+class VehicleMode extends React.Component<ControllerProps, {}> {
   constructor (props:ControllerProps) {
       super(props)
-      this.state = {
-        plan_index:0
-      }
-  }
-
-  getplanSelected(e:any):void{
-    this.props.getplanSelected(e)
-    this.setState({plan_index:+e.target.value})
   }
 
   render () {
-    const { plan_list, vehicle_id, vehicle_id_list, getVehicleIdSelected,
+    const { plan_index, plan_list, getplanSelected, vehicle_id, vehicle_id_list, getVehicleIdSelected,
       charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected } = this.props
 
     return (<>
@@ -257,7 +248,7 @@ class VehicleMode extends React.Component<ControllerProps, ControllerState> {
         <li>
           <div className="form-select" title='プラン選択'>
             <label htmlFor="planSelected" className="form-select-label">プラン選択</label>
-            <select id="planSelected" value={this.state.plan_index} onChange={this.getplanSelected.bind(this)} >
+            <select id="planSelected" value={plan_index} onChange={getplanSelected} >
             {plan_list.map(x=><option value={x.index} key={x.index}>{x.name}</option>)}
             </select>
           </div>
@@ -298,7 +289,7 @@ class VehicleMode extends React.Component<ControllerProps, ControllerState> {
             </select>
           </div>
         </li>:null}*/}
-        {charging_plan_id_list.length > 0?
+        {/*{charging_plan_id_list.length > 0?
         <li>
           <div className="form-select" title='充電計画ID(charging_plan_id)選択'>
             <label htmlFor="chargingPlanIdSelect" className="form-select-label">充電計画ID(charging_plan_id)選択</label>
@@ -306,7 +297,39 @@ class VehicleMode extends React.Component<ControllerProps, ControllerState> {
             {charging_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
             </select>
           </div>
-        </li>:null}
+        </li>:null}*/}
+      </>
+    )
+  }
+}
+
+class PlanMode extends React.Component<ControllerProps, {}> {
+  constructor (props:ControllerProps) {
+      super(props)
+  }
+
+  render () {
+    route_line_color
+    const { plan_index, plan_list, getplanSelected } = this.props
+    
+    const list:any[] = plan_list.map((x,index)=>{
+      const colorstr = rgbStrChg(route_line_color[index])
+      return {
+        value:index,
+        caption:<><span style={{color:colorstr}}>◆</span>&nbsp;{x.name}</>,
+        defaultChecked:(plan_index===index)
+      }
+    })
+    const RadioButtonProps = {
+      name:'Plans', list, onChange:getplanSelected
+    }
+
+    return (<>
+      <li><span>プラン選択</span>
+        {plan_list.length > 0?
+          <RadioButtons {...RadioButtonProps} />
+        :null}
+      </li>
       </>
     )
   }
