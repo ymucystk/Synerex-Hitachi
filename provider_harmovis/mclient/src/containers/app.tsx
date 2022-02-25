@@ -272,8 +272,9 @@ class App extends Container<any,Partial<State>> {
 		}
 	}
 	setVehicleId (vehicle_id?:Readonly<number>):void {
-		if(this.deliveryplanningprovide.length > 0){
-			const filter_list = this.deliveryplanningprovide.filter(
+		const deliveryplanningprovide = this.deliveryplanningprovide.filter((x)=>x.Vehicle_assignate !== undefined)
+		if(deliveryplanningprovide.length > 0){
+			const filter_list = deliveryplanningprovide.filter(
 				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
 			if(filter_list.length > 0){
 				const vehicle_id_list:number[] = []
@@ -337,8 +338,9 @@ class App extends Container<any,Partial<State>> {
 		}
 	}
 	setDeliveryPlanId (delivery_plan_id?:Readonly<number>):void {
-		if(this.deliveryplanningprovide.length > 0){
-			const filter_list = this.deliveryplanningprovide.filter(
+		const deliveryplanningprovide = this.deliveryplanningprovide.filter((x)=>x.Vehicle_assignate !== undefined && x.delivery_plan !== undefined)
+		if(deliveryplanningprovide.length > 0){
+			const filter_list = deliveryplanningprovide.filter(
 				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
 			if(filter_list.length > 0){
 				const delivery_plan_id_list:number[] = []
@@ -386,8 +388,9 @@ class App extends Container<any,Partial<State>> {
 		}
 	}
 	setChargingPlanId (charging_plan_id?:Readonly<number>):void {
-		if(this.deliveryplanningprovide.length > 0){
-			const filter_list = this.deliveryplanningprovide.filter(
+		const deliveryplanningprovide = this.deliveryplanningprovide.filter((x)=>x.Vehicle_assignate !== undefined && x.charging_plan !== undefined)
+		if(deliveryplanningprovide.length > 0){
+			const filter_list = deliveryplanningprovide.filter(
 				x=>x.module_id === this.module_id && x.provide_id === this.provide_id)
 			if(filter_list.length > 0){
 				const charging_plan_id_list:number[] = []
