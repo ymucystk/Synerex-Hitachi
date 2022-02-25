@@ -13,7 +13,6 @@ interface Props {
   vehicle_id_list: number[],
   charging_plan_id_list: number[],
   packages_info_list: PackagePlan[],
-  charging_plan_list: ChargingPlan[],
   deliveryplanningrequest: DeliveryPlanningRequest,
   deliveryplanningprovide: DeliveryPlanningProvide[],
   getVehicleIdSelected: any,
@@ -41,7 +40,7 @@ export class DeliveryPlanTimeline extends React.Component<Props> {
 }
 
 const default_style = { 'background': 'white', 'padding': '5px 10px 0px' };
-const default_options = { timeline:{ colorByRowLabel:true }, alternatingRowStyle:false }
+const default_options = { timeline:{ colorByRowLabel:false }, alternatingRowStyle:false }
 const stringToDate = (strDate:string)=>{
   if(strDate.length === 14){
     const year = parseInt(strDate.substring(0, 4))
@@ -70,8 +69,7 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
   constructor (props: Props) {
 		super(props)
     this.setHeight = '0px'
-    this.sts_vehicle_id = undefined,
-    this.sts_delivery_plan_id = undefined
+    this.sts_vehicle_id = undefined
     this.sts_charging_plan_id = undefined
     this.state = {
       allVehicleMode:true
@@ -79,7 +77,6 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
   }
   setHeight: string
   sts_vehicle_id: number
-  sts_delivery_plan_id: number
   sts_charging_plan_id: number
 
   static defaultProps = {
@@ -96,17 +93,14 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
   }
 
   getVehicleIdSelected (e :any):void {
-    const {display_mode,deliveryplanningprovide,plan_list,plan_index} = this.props
+    const {deliveryplanningprovide,plan_list,plan_index} = this.props
     const {module_id,provide_id} = plan_list[plan_index]
-    if(display_mode !== 'plan'){
-      this.props.getVehicleIdSelected(e)
-    }
+    this.props.getVehicleIdSelected(e)
     const vehicle_id = +e.target.value
     this.sts_vehicle_id = vehicle_id
     const {Vehicle_assignate} =
     deliveryplanningprovide.find(x=>x.module_id===module_id && x.provide_id===provide_id)
     const delivery_plan_id = Vehicle_assignate.find(x=>x.vehicle_id===vehicle_id).delivery_plan_id
-    this.sts_delivery_plan_id = delivery_plan_id
 	}
   onChangeAllVehicleMode(e: React.ChangeEvent<HTMLInputElement>){
       this.setState({ allVehicleMode: e.target.checked });
@@ -114,10 +108,13 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
 
   render() {
     const {display_mode,plan_index,plan_list,vehicle_id,delivery_plan_id,charging_plan_id,
-      vehicle_id_list,packages_info_list,charging_plan_list,charging_plan_id_list,
+      vehicle_id_list,packages_info_list,charging_plan_id_list,
       deliveryplanningrequest,deliveryplanningprovide,width,height,columnDef,rows,options} = this.props
     const {module_id,provide_id} = plan_list[plan_index]
     const {delivery_plan,charging_plan,Vehicle_assignate} = deliveryplanningprovide.find(x=>x.module_id===module_id && x.provide_id===provide_id)
+    if(Vehicle_assignate===undefined){
+      return (null);
+    }
 
     let dsp_vehicle_id = vehicle_id
     let dsp_vehicle_id_list = vehicle_id_list
@@ -137,20 +134,16 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
       allVehicle.push(dsp_vehicle_id)
     }
 
-    const timelineData:any[] = []
+    const timelineData:[string,string,Date,Date][] = []
     for(const for_vehicle_id of allVehicle){
       let dsp_delivery_plan_id = delivery_plan_id
       let dsp_charging_plan_id = charging_plan_id
       let dsp_charging_plan_id_list = charging_plan_id_list
       let dsp_packages_info_list = packages_info_list
-      let dsp_charging_plan_list = charging_plan_list
-      if(display_mode==='plan'){
+      if(allVehicle.length > 1){
   
         const va_find_data = Vehicle_assignate.find(x=>x.vehicle_id===for_vehicle_id)
-        if(this.sts_delivery_plan_id===undefined){
-          this.sts_delivery_plan_id = va_find_data.delivery_plan_id
-        }
-        dsp_delivery_plan_id = this.sts_delivery_plan_id
+        dsp_delivery_plan_id = va_find_data.delivery_plan_id
   
         dsp_charging_plan_id_list = va_find_data.charging_plans.map(x=>x.charging_plan_id)
         if(this.sts_charging_plan_id===undefined){
@@ -160,26 +153,36 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
   
         const dp_find_data = delivery_plan.find(x=>x.delivery_plan_id===dsp_delivery_plan_id)
         dsp_packages_info_list = dp_find_data.packages_plan.map(x=>x)
-  
-        dsp_charging_plan_list = charging_plan.filter(x=>x.vehicle_id===for_vehicle_id && x.charging_plan_id===dsp_charging_plan_id)
       }
   
       const time_list:[Date,string][] = dsp_packages_info_list.map(x=>[stringToDate(x.estimated_time_of_arrival),x.estimated_time_of_arrival])
       time_list.sort((a,b) => a[0]>b[0]?1:a[0]<b[0]?-1:0)
       for(const cg_plan_id of dsp_charging_plan_id_list){
+        const delivery_start_time = time_list[0][0]
+        const delivery_end_time = time_list[time_list.length-1][0]
         timelineData.push([
           `車両-配送-充電ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
           `配送作業時間 : ${time_list[0][1].substring(8,12)}～${time_list[time_list.length-1][1].substring(8,12)}`,
-          time_list[0][0], time_list[time_list.length-1][0]
+          delivery_start_time, delivery_end_time
         ])
-        dsp_charging_plan_list = charging_plan.filter(x=>x.vehicle_id===for_vehicle_id && x.charging_plan_id===cg_plan_id)
+        const dsp_charging_plan_list = charging_plan.filter(x=>x.vehicle_id===for_vehicle_id && x.charging_plan_id===cg_plan_id)
         for(const charging_plan of dsp_charging_plan_list){
-          timelineData.push([
-            `車両-配送-充電ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
-            `充電 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
-            stringToDate(charging_plan.start_time),
-            stringToDate(charging_plan.end_time)
-          ])
+          const start_time = stringToDate(charging_plan.start_time)
+          const end_time = stringToDate(charging_plan.end_time)
+          if((start_time < delivery_start_time && end_time <= delivery_start_time) ||
+            (delivery_end_time <= start_time && delivery_end_time < end_time)){
+            timelineData.push([
+              `車両-配送-充電ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
+              `充電 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
+              start_time, end_time
+            ])
+          }else{
+            timelineData.push([
+              `車両-配送-充電ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}-補`,
+              `充電 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
+              start_time, end_time
+            ])
+          }
         }
       }
     }

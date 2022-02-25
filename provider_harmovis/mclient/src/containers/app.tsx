@@ -1726,6 +1726,12 @@ class App extends Container<any,Partial<State>> {
 					deliveryplanningprovide={this.deliveryplanningprovide}
 					deliveryplanadoption={this.deliveryplanadoption}
 					/>
+				</>
+				:<></>
+			)
+		const evfleetsupplychart  = 
+			(this.state.controlVisible?
+				<>
 					<div className='harmovis_gauge'>
 						<div className='container'>
 						<ul className='list-group'>
@@ -1741,30 +1747,10 @@ class App extends Container<any,Partial<State>> {
 						</ul>
 						</div>
 					</div>
-					<div className='harmovis_schedule'>
-						<div className='container'>
-						<ul className='list-group'>
-							<DeliveryPlanTimeline
-							display_mode={this.display_mode}
-							plan_index={this.plan_index}
-							plan_list={this.plan_list}
-							vehicle_id={this.vehicle_id}
-							delivery_plan_id={this.delivery_plan_id}
-							charging_plan_id={this.charging_plan_id}
-							vehicle_id_list={this.vehicle_id_list}
-							charging_plan_id_list={this.charging_plan_id_list}
-							packages_info_list={this.packages_info_list}
-							charging_plan_list={this.charging_plan_list}
-							deliveryplanningrequest={this.deliveryplanningrequest}
-							deliveryplanningprovide={this.deliveryplanningprovide}
-							getVehicleIdSelected={this.getVehicleIdSelected.bind(this)}
-							/>
-						</ul>
-						</div>
-					</div>
 				</>
 				:<></>
 			)
+
 		const fpsdisp =
 				(this.state.fpsVisible?
 					<FpsDisplay />
@@ -1772,9 +1758,30 @@ class App extends Container<any,Partial<State>> {
 				)
 		return (
 			<div>
-				{controller}
 				<div className='harmovis_area'>
 					{visLayer}
+				</div>
+				{controller}
+				{evfleetsupplychart}
+				<div className='harmovis_schedule'>
+					<div className='container'>
+					<ul className='list-group'>
+						<DeliveryPlanTimeline
+						display_mode={this.display_mode}
+						plan_index={this.plan_index}
+						plan_list={this.plan_list}
+						vehicle_id={this.vehicle_id}
+						delivery_plan_id={this.delivery_plan_id}
+						charging_plan_id={this.charging_plan_id}
+						vehicle_id_list={this.vehicle_id_list}
+						charging_plan_id_list={this.charging_plan_id_list}
+						packages_info_list={this.packages_info_list}
+						deliveryplanningrequest={this.deliveryplanningrequest}
+						deliveryplanningprovide={this.deliveryplanningprovide}
+						getVehicleIdSelected={this.getVehicleIdSelected.bind(this)}
+						/>
+					</ul>
+					</div>
 				</div>
 				<svg width={viewport.width} height={viewport.height} className="harmovis_overlay">
 					<g fill="white" fontSize="12">
