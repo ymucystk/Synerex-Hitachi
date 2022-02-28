@@ -79,6 +79,7 @@ interface State {
 	popup: [number, number, string],
 	osm_data: object,
 	chartData: object,
+	allVehicleMode:boolean
 };
   
 class App extends Container<any,Partial<State>> {
@@ -150,6 +151,7 @@ class App extends Container<any,Partial<State>> {
 			popup: [0, 0, ''],
 			osm_data: {},
 			chartData: undefined,
+			allVehicleMode:true
 		}
 		this.movesbase = []
 		this.display_mode = 'plan'
@@ -998,6 +1000,10 @@ class App extends Container<any,Partial<State>> {
 		this.setState({ osm_data: osm_data })
 	}
 
+	onChangeAllVehicleMode(e: React.ChangeEvent<HTMLInputElement>){
+		this.setState({ allVehicleMode: e.target.checked });
+	}
+  
 	getExtractedDataFunc(props:any):any{
 		if(this.movesbase.length > 0){
 			const { settime, timeLength, iconGradation } = props;
@@ -1544,7 +1550,7 @@ class App extends Container<any,Partial<State>> {
 						}
 					}
 				}else
-				if(module_id !== undefined && element.module_id === module_id &&
+				if(!this.state.allVehicleMode && module_id !== undefined && element.module_id === module_id &&
 					provide_id !== undefined && element.provide_id === provide_id && vehicle_id !== undefined){
 	
 					const findIndex = element.Vehicle_assignate.findIndex(x=>x.vehicle_id === vehicle_id && x.delivery_plan_id === delivery_plan_id)
@@ -1597,7 +1603,7 @@ class App extends Container<any,Partial<State>> {
 											...other,
 											position:[longitude, latitude],
 											delivery_time: delivery_time_table[delivery_time],
-											estimated_time_of_arrival: delivery_packages_info.estimated_time_of_arrival,
+											estimated_time_of_arrival: editCaption(delivery_packages_info.estimated_time_of_arrival),
 											color: delivery_time_color[delivery_time],
 											message: 'DeliveryPlanningRequest',
 											text
@@ -1636,6 +1642,102 @@ class App extends Container<any,Partial<State>> {
 								getPixelOffset: [-20,-30]
 							} as any)
 						)
+					}
+					break
+				}else
+				if(this.state.allVehicleMode && module_id !== undefined && element.module_id === module_id &&
+					provide_id !== undefined && element.provide_id === provide_id && vehicle_id !== undefined){
+
+					const adoption = this.deliveryplanadoption.find(x=>x.module_id === module_id && x.provide_id === provide_id)
+					for (let i = 0, lengthi = element.Vehicle_assignate.length; i < lengthi; i=(i+1)|0) {
+						const Vehicle_assignate = element.Vehicle_assignate[i]
+						const {vehicle_id:_vehicle_id,delivery_plan_id:_delivery_plan_id} = Vehicle_assignate
+						const { route_info, charging_plans } = Vehicle_assignate
+						const data:PathData[] = []
+						const path:number[][] = []
+						for (const {longitude,latitude} of route_info){
+							path.push([longitude, latitude, 10])
+						}
+						const module_color = route_line_color[i%5]
+						data.push({path:path, vehicle_id:_vehicle_id, delivery_plan_id:_delivery_plan_id,
+							charging_plans, message:"VehicleRouteLayer"})
+						layers.push( new PathLayer({
+							id: `VehicleRouteLayer-${i}`,
+							data,
+							visible:true,
+							opacity: adoption === undefined ? 0.7 : 1.0,
+							pickable:true,
+							widthUnits: 'meters',
+							widthMinPixels: 1,
+							capRounded: true,
+							jointRounded: true,
+							getPath: (x:PathData) => x.path,
+							getColor: (x:PathData) => x.color || module_color,
+							getWidth: (x:PathData) => x.width || (adoption === undefined ? 7 : 10),
+							onHover,
+							onClick,
+							getDashArray: adoption === undefined ? [5,5] : [0,0],
+							extensions
+						} as any))
+
+						if(this.deliveryplanningrequest && this.deliveryplanningrequest.delivery_info &&
+							this.deliveryplanningrequest.delivery_info.packages_info){
+
+							const packages_info_list = this.deliveryplanningrequest.delivery_info.packages_info
+							const delivery_point_data:any[] = []
+							for (let j = 0, lengthj = element.delivery_plan.length; j < lengthj; j=(j+1)|0) {
+								const delivery_plan = element.delivery_plan[j]
+								if(delivery_plan.delivery_plan_id === _delivery_plan_id){
+									for (const delivery_packages_info of delivery_plan.packages_plan){
+										const selectData = packages_info_list.filter(x=>x.package_id === delivery_packages_info.package_id)
+										for(const package_info of selectData){
+											const {longitude, latitude, delivery_time, ...other} = package_info
+											const text = 'package_id:'+package_info.package_id+' weight:'+package_info.weight+
+												' estimated_time_of_arrival:'+editCaption(delivery_packages_info.estimated_time_of_arrival)
+											delivery_point_data.push({
+												...other,
+												position:[longitude, latitude],
+												delivery_time: delivery_time_table[delivery_time],
+												estimated_time_of_arrival: editCaption(delivery_packages_info.estimated_time_of_arrival),
+												color: module_color,
+												message: 'DeliveryPlanningRequest',
+												text
+											})
+										}
+									}
+								}
+							}
+							layers.push(
+								new SimpleMeshLayer({
+									id: 'delivery-point-layer',
+									data: delivery_point_data,
+									mesh: busstopmesh,
+									sizeScale: 50,
+									getPosition: (x:any)=>x.position,
+									getColor: (x:any)=>x.color,
+									getScale: (x:any)=>[1,1,x.weight],
+									opacity: 0.5,
+									pickable: true,
+									onHover,
+									onClick
+								} as any)
+							)
+							layers.push(
+								new TextLayer({
+									id: 'delivery-point-text-layer',
+									data: delivery_point_data,
+									getPosition: (x:any)=>x.position,
+									getColor: (x:any)=>x.color,
+									background: true,
+									getBackgroundColor: [0,0,0,128],
+									getAngle: -30,
+									getTextAnchor: 'end',
+									getSize: 13,
+									fontWeight: 80,
+									getPixelOffset: [-20,-30]
+								} as any)
+							)
+						}
 					}
 					break
 				}
@@ -1732,6 +1834,8 @@ class App extends Container<any,Partial<State>> {
 					charging_plan_id_list={this.charging_plan_id_list}
 					getDeliveryPlanIdSelected={this.getDeliveryPlanIdSelected.bind(this)}
 					getChargingPlanIdSelected={this.getChargingPlanIdSelected.bind(this)}
+					allVehicleMode={this.state.allVehicleMode}
+					onChangeAllVehicleMode={this.onChangeAllVehicleMode.bind(this)}
 					deliveryplanningrequest={this.deliveryplanningrequest}
 					deliveryplanningprovide={this.deliveryplanningprovide}
 					deliveryplanadoption={this.deliveryplanadoption}
@@ -1789,6 +1893,8 @@ class App extends Container<any,Partial<State>> {
 						deliveryplanningrequest={this.deliveryplanningrequest}
 						deliveryplanningprovide={this.deliveryplanningprovide}
 						getVehicleIdSelected={this.getVehicleIdSelected.bind(this)}
+						allVehicleMode={this.state.allVehicleMode}
+						onChangeAllVehicleMode={this.onChangeAllVehicleMode.bind(this)}
 						/>
 					</ul>
 					</div>

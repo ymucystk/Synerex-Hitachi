@@ -68,6 +68,8 @@ interface ControllerProps {
   charging_plan_id_list: number[],
   getDeliveryPlanIdSelected: any,
   getChargingPlanIdSelected: any,
+  allVehicleMode: boolean,
+  onChangeAllVehicleMode: any,
   deliveryplanningrequest: DeliveryPlanningRequest,
   deliveryplanningprovide: DeliveryPlanningProvide[],
   deliveryplanadoption: DeliveryPlanAdoption[]
@@ -241,7 +243,7 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
 
   render () {
     const { plan_index, plan_list, getplanSelected, vehicle_id, vehicle_id_list, getVehicleIdSelected,
-      charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected } = this.props
+      charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected, allVehicleMode, onChangeAllVehicleMode } = this.props
 
     return (<>
         {plan_list.length > 0?
@@ -272,14 +274,24 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
           </div>
         </li>:null}*/}
         {vehicle_id_list.length > 0?
-        <li>
-          <div className="form-select" title='車両(vehicle_id)選択'>
-            <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
-            <select id="VehicleIdSelect" value={vehicle_id} onChange={getVehicleIdSelected} >
-            {vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-            </select>
-          </div>
-        </li>:null}
+          <><li>
+              <input type="checkbox" onChange={onChangeAllVehicleMode}
+              className="harmovis_input_checkbox" checked={allVehicleMode} />全車両モード
+            </li>
+            <li>
+              {allVehicleMode?
+                <div><span>車両(vehicle_id)一覧</span>
+                  {vehicle_id_list.map((x,i)=><p><span style={{color:rgbStrChg(route_line_color[i])}}>◆</span>&nbsp;{x}</p>)}
+                </div>:
+                <div className="form-select" title='車両(vehicle_id)選択'>
+                  <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
+                  <select id="VehicleIdSelect" value={vehicle_id} onChange={getVehicleIdSelected} >
+                  {vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                  </select>
+                </div>
+              }
+            </li>
+          </>:null}
         {/*{delivery_plan_id_list.length > 0?
         <li>
           <div className="form-select" title='配送計画ID(delivery_plan_id)選択'>
@@ -309,8 +321,7 @@ class PlanMode extends React.Component<ControllerProps, {}> {
   }
 
   render () {
-    route_line_color
-    const { plan_index, plan_list, getplanSelected } = this.props
+    const { plan_index, plan_list, getplanSelected, allVehicleMode, onChangeAllVehicleMode} = this.props
     
     const list:any[] = plan_list.map((x,index)=>{
       const colorstr = rgbStrChg(route_line_color[index])
@@ -329,6 +340,10 @@ class PlanMode extends React.Component<ControllerProps, {}> {
         {plan_list.length > 0?
           <RadioButtons {...RadioButtonProps} />
         :null}
+      </li>
+      <li>
+        <input type="checkbox" onChange={onChangeAllVehicleMode}
+          className="harmovis_input_checkbox" checked={allVehicleMode} />全車両モード
       </li>
       </>
     )

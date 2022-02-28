@@ -16,6 +16,8 @@ interface Props {
   deliveryplanningrequest: DeliveryPlanningRequest,
   deliveryplanningprovide: DeliveryPlanningProvide[],
   getVehicleIdSelected: any,
+  allVehicleMode:boolean,
+  onChangeAllVehicleMode: any,
   width?: string,
   height?: string,
   columnDef?: any[],
@@ -60,20 +62,13 @@ const editCaption = (startDate:string,endDate:string)=>{
   return ''
 }
 
-interface State {
-  allVehicleMode:boolean
-}
-
-class _DeliveryPlanTimeline extends React.Component<Props,State> {
+class _DeliveryPlanTimeline extends React.Component<Props> {
 
   constructor (props: Props) {
 		super(props)
     this.setHeight = '0px'
     this.sts_vehicle_id = undefined
     this.sts_charging_plan_id = undefined
-    this.state = {
-      allVehicleMode:true
-    }
   }
   setHeight: string
   sts_vehicle_id: number
@@ -93,22 +88,14 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
   }
 
   getVehicleIdSelected (e :any):void {
-    const {deliveryplanningprovide,plan_list,plan_index} = this.props
-    const {module_id,provide_id} = plan_list[plan_index]
     this.props.getVehicleIdSelected(e)
     const vehicle_id = +e.target.value
     this.sts_vehicle_id = vehicle_id
-    const {Vehicle_assignate} =
-    deliveryplanningprovide.find(x=>x.module_id===module_id && x.provide_id===provide_id)
-    const delivery_plan_id = Vehicle_assignate.find(x=>x.vehicle_id===vehicle_id).delivery_plan_id
 	}
-  onChangeAllVehicleMode(e: React.ChangeEvent<HTMLInputElement>){
-      this.setState({ allVehicleMode: e.target.checked });
-  }
 
   render() {
     const {display_mode,plan_index,plan_list,vehicle_id,delivery_plan_id,charging_plan_id,
-      vehicle_id_list,packages_info_list,charging_plan_id_list,
+      vehicle_id_list,packages_info_list,charging_plan_id_list, allVehicleMode, onChangeAllVehicleMode,
       deliveryplanningrequest,deliveryplanningprovide,width,height,columnDef,rows,options} = this.props
     const {module_id,provide_id} = plan_list[plan_index]
     const {delivery_plan,charging_plan,Vehicle_assignate} = deliveryplanningprovide.find(x=>x.module_id===module_id && x.provide_id===provide_id)
@@ -126,7 +113,7 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
       dsp_vehicle_id = this.sts_vehicle_id
     }
     const allVehicle:number[] = []
-    if(this.state.allVehicleMode){
+    if(allVehicleMode){
       for(const id of dsp_vehicle_id_list){
         allVehicle.push(id)
       }
@@ -230,12 +217,14 @@ class _DeliveryPlanTimeline extends React.Component<Props,State> {
         <span id={`expand-${plan_index}`} style={{display: 'block',clear: 'both'}}>
           <table>
             <tr>
+              {display_mode==='plan'?
+                <td>
+                  <input type="checkbox" onChange={onChangeAllVehicleMode}
+                    className="harmovis_input_checkbox" checked={allVehicleMode} />全車両モード
+                </td>
+              :null}
               <td>
-                <input type="checkbox" onChange={this.onChangeAllVehicleMode.bind(this)}
-                  className="harmovis_input_checkbox" checked={this.state.allVehicleMode} />全車両モード
-              </td>
-              <td>
-              {dsp_vehicle_id_list.length > 0 && !this.state.allVehicleMode?
+              {dsp_vehicle_id_list.length > 0 && !allVehicleMode?
                 <div className="form-select" title='車両(vehicle_id)選択'>
                   <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
                   <select id="VehicleIdSelect" value={dsp_vehicle_id} onChange={this.getVehicleIdSelected.bind(this)}>
