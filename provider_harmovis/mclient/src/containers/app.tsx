@@ -1337,7 +1337,7 @@ class App extends Container<any,Partial<State>> {
 				current.soh = current.soh === undefined ? 0 : current.soh
 				current.air_conditioner = current.air_conditioner === undefined ? 0 : current.air_conditioner
 				const air_conditioner = ((current.air_conditioner > 0) ? '1:use':'0:not use')
-				current.text = 'vehicle_id:'+current.vehicle_id+'\nsoc:'+current.soc+'% soh:'+current.soh+'%\nair_conditioner:'+air_conditioner
+				current.text = 'vehicle_id:'+current.vehicle_id+' soc:'+current.soc+'% soh:'+current.soh+'% air_conditioner:'+air_conditioner
 				if(current.targetPosition[0] === current.sourcePosition[0] &&
 					current.targetPosition[1] === current.sourcePosition[1] &&
 					current.targetPosition[2] === current.sourcePosition[2]){
@@ -1378,6 +1378,9 @@ class App extends Container<any,Partial<State>> {
 					data,
 					getPosition: (x:EvFleetSupply)=>x.position,
 					getColor: (x:EvFleetSupply)=>ratecolor(x.soc),
+					background: true,
+					getBackgroundColor: [0,0,0,128],
+					getAngle: 30,
 					getTextAnchor: 'start',
 					getSize: 13,
 					fontWeight: 80,
@@ -1492,7 +1495,7 @@ class App extends Container<any,Partial<State>> {
 												const selectData = packages_info_list.filter(x=>x.package_id === delivery_packages_info.package_id)
 												for(const package_info of selectData){
 													const {longitude, latitude, delivery_time, ...other} = package_info
-													const text = 'package_id:'+package_info.package_id+'\nweight:'+package_info.weight+'\ndelivery_time:'+delivery_time_table[delivery_time]
+													const text = 'package_id:'+package_info.package_id+' weight:'+package_info.weight+' delivery_time:'+delivery_time_table[delivery_time]
 													delivery_point_data.push({
 														...other,
 														position:[longitude, latitude],
@@ -1527,10 +1530,13 @@ class App extends Container<any,Partial<State>> {
 											data: delivery_point_data,
 											getPosition: (x:any)=>x.position,
 											getColor: (x:any)=>x.color,
-											getTextAnchor: 'start',
+											background: true,
+											getBackgroundColor: [0,0,0,128],
+											getAngle: -30,
+											getTextAnchor: 'end',
 											getSize: 13,
 											fontWeight: 80,
-											getPixelOffset: [20,-30]
+											getPixelOffset: [-20,-30]
 										} as any)
 									)
 								}
@@ -1585,7 +1591,8 @@ class App extends Container<any,Partial<State>> {
 									const selectData = packages_info_list.filter(x=>x.package_id === delivery_packages_info.package_id)
 									for(const package_info of selectData){
 										const {longitude, latitude, delivery_time, ...other} = package_info
-										const text = 'package_id:'+package_info.package_id+'\nweight:'+package_info.weight+'\ndelivery_time:'+delivery_time_table[delivery_time]
+										const text = 'package_id:'+package_info.package_id+' weight:'+package_info.weight+
+											' estimated_time_of_arrival:'+editCaption(delivery_packages_info.estimated_time_of_arrival)
 										delivery_point_data.push({
 											...other,
 											position:[longitude, latitude],
@@ -1620,10 +1627,13 @@ class App extends Container<any,Partial<State>> {
 								data: delivery_point_data,
 								getPosition: (x:any)=>x.position,
 								getColor: (x:any)=>x.color,
-								getTextAnchor: 'start',
+								background: true,
+								getBackgroundColor: [0,0,0,128],
+								getAngle: -30,
+								getTextAnchor: 'end',
 								getSize: 13,
 								fontWeight: 80,
-								getPixelOffset: [20,-30]
+								getPixelOffset: [-20,-30]
 							} as any)
 						)
 					}
@@ -1935,3 +1945,11 @@ export const rgbStrChg = (rgb: number[]) => {
 	const blue = rgb[2] > 0xF ? rgb[2].toString(16) : `0${rgb[2].toString(16)}`
 	return `#${red}${green}${blue}`
 }
+
+const editCaption = (strDate:string)=>{
+	if(strDate.length === 14){
+		return `${strDate.substring(8, 10)}:${strDate.substring(10, 12)}`
+	}
+	return ''
+}
+  

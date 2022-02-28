@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Chart from "react-google-charts";
-import {route_line_color,rgbStrChg} from '../containers/app'
+import { route_line_color, rgbStrChg } from '../containers/app'
 import { PlanList, DeliveryPlanningRequest, DeliveryPlanningProvide, PackagePlan, ChargingPlan } from '../@types'
 
 interface Props {
