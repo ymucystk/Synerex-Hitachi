@@ -276,7 +276,7 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
         {vehicle_id_list.length > 0?
           <><li>
               <input type="checkbox" onChange={onChangeAllVehicleMode}
-              className="harmovis_input_checkbox" checked={allVehicleMode} />全車両モード
+              className="harmovis_input_checkbox" checked={allVehicleMode} />&nbsp;全車両モード
             </li>
             <li>
               {allVehicleMode?
@@ -336,15 +336,15 @@ class PlanMode extends React.Component<ControllerProps, {}> {
     }
 
     return (<>
-      <li><span>プラン選択</span>
-        {plan_list.length > 0?
+      {plan_list.length > 0?<>
+        <li><span>プラン選択</span>
           <RadioButtons {...RadioButtonProps} />
-        :null}
-      </li>
-      <li>
-        <input type="checkbox" onChange={onChangeAllVehicleMode}
-          className="harmovis_input_checkbox" checked={allVehicleMode} />全車両モード
-      </li>
+        </li>
+        <li>
+          <input type="checkbox" onChange={onChangeAllVehicleMode}
+            className="harmovis_input_checkbox" checked={allVehicleMode} />&nbsp;全車両モード
+        </li></>
+      :null}
       </>
     )
   }

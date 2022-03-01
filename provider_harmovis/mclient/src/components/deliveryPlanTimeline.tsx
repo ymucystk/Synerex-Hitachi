@@ -217,7 +217,7 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
         <span id={`expand-${plan_index}`} style={{display: 'block',clear: 'both'}}>
           <table>
             <tr>
-              {display_mode==='plan'?
+              {/*display_mode==='plan'*/false?
                 <td>
                   <input type="checkbox" onChange={onChangeAllVehicleMode}
                     className="harmovis_input_checkbox" checked={allVehicleMode} />全車両モード
