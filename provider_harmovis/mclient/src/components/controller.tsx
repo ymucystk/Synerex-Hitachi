@@ -53,14 +53,10 @@ interface ControllerProps {
   plan_index:number
   plan_list: PlanList[]
   getplanSelected: any,
-	module_id:number,
-	provide_id:string,
   vehicle_id: number,
   getModuleIdSelected: any, 
   getProvideIdSelected: any, 
   getVehicleIdSelected: any,
-	module_id_list:number[],
-  provide_id_list:string[],
   vehicle_id_list: number[],
   delivery_plan_id: number,
   charging_plan_id: number,
@@ -98,12 +94,15 @@ export default class Controller extends React.Component<ControllerProps, {}> {
   }
 
   render () {
-    const { settime, timeBegin, leading, timeLength, actions, secperhour, animatePause, animateReverse,
-      getMoveDataChecked, getMoveOptionChecked, display_mode, display_mode_list, getDisplayModeSelected,
-      module_id, provide_id, module_id_list, provide_id_list, inputFileName, viewport, getOsmData, chartData,
+    const { settime, timeBegin, leading, timeLength, actions, secperhour, animatePause, animateReverse, vehicle_id_list,
+      plan_index, plan_list, getMoveDataChecked, getMoveOptionChecked, display_mode, display_mode_list, getDisplayModeSelected,
+      inputFileName, viewport, getOsmData, chartData,
       deliveryplanningrequest, deliveryplanningprovide:deliveryplanningprovideList, deliveryplanadoption } = this.props
 
     const { movesFileName, osmDataFileName } = inputFileName
+    const { module_id, provide_id } = plan_list.length > 0?plan_list[plan_index]:{ module_id:undefined, provide_id:undefined }
+    const module_id_list = plan_list.map(x=>x.module_id)
+    const provide_id_list = plan_list.map(x=>x.provide_id)
     const deliveryplanningprovide = deliveryplanningprovideList.find((x=>x.module_id === module_id && x.provide_id === provide_id))
 
     return (<>
@@ -207,14 +206,16 @@ export default class Controller extends React.Component<ControllerProps, {}> {
               <p>配送開始:&nbsp;{stringToDate(deliveryplanningrequest.target_info.start_delivery_time)}</p>
               <p>配送終了:&nbsp;{stringToDate(deliveryplanningrequest.target_info.end_delivery_time)}</p>
               {deliveryplanningrequest && deliveryplanningrequest.delivery_info ?<>
-                  <p>配送パッケージ数:&nbsp;{deliveryplanningrequest.delivery_info.packages_info.length}</p>
+                <p>配送ID:&nbsp;{deliveryplanningrequest.delivery_info.delivery_id}</p>
+                <p>配送パッケージ数:&nbsp;{deliveryplanningrequest.delivery_info.packages_info.length}</p>
               </>:null}
-              {deliveryplanningprovide !== undefined ?<>
-              <p>配送プラン数(delivery_plan):&nbsp;{deliveryplanningprovide.delivery_plan.length}</p>
-              <p>充電プラン数(charging_plan):&nbsp;{deliveryplanningprovide.charging_plan.length}</p>
+              {plan_list.length > 0 && deliveryplanningprovide !== undefined ?<>
+                <p>{plan_list[plan_index].name}&nbsp;車両台数:&nbsp;{vehicle_id_list.length}</p>
+                <p>{plan_list[plan_index].name}&nbsp;充電器数:&nbsp;
+                  {Array.from(new Set(deliveryplanningprovide.charging_plan.map(x=>`${x.charging_station_id}${x.charger_id}`))).length}</p>
               </>:null}
-              {(module_id_list.length > 0 && provide_id_list.length > 0)?<>
-                <p>配送計画採用状況:{deliveryplanadoption.findIndex(x=>x.module_id === module_id && x.provide_id === provide_id) < 0?'未採用':'採用'}</p>
+              {plan_list.length > 0 && module_id_list.length > 0 && provide_id_list.length > 0?<>
+                <p>{plan_list[plan_index].name}&nbsp;採用状況:&nbsp;{deliveryplanadoption.findIndex(x=>x.module_id === module_id && x.provide_id === provide_id) < 0?'未採用':'採用'}</p>
               </>:null}
             </li>
             </>:null}
@@ -242,16 +243,19 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
   }
 
   render () {
-    const { plan_index, plan_list, getplanSelected, vehicle_id, vehicle_id_list, getVehicleIdSelected,
+    const { plan_index, plan_list, getplanSelected, vehicle_id, vehicle_id_list, getVehicleIdSelected, deliveryplanadoption,
       charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected, allVehicleMode, onChangeAllVehicleMode } = this.props
 
+    const adoptReceive = deliveryplanadoption.length > 0
     return (<>
         {plan_list.length > 0?
         <li>
-          <div className="form-select" title='プラン選択'>
-            <label htmlFor="planSelected" className="form-select-label">プラン選択</label>
+          <div className="form-select" title='運行データ'>
+            <label htmlFor="planSelected" className="form-select-label">運行データ</label>
             <select id="planSelected" value={plan_index} onChange={getplanSelected} >
-            {plan_list.map(x=><option value={x.index} key={x.index}>{x.name}</option>)}
+            {plan_list.map(x=><option value={x.index} key={x.index}
+              disabled={adoptReceive&&(deliveryplanadoption.find(y=>y.module_id===x.module_id&&y.provide_id===x.provide_id)===undefined)}>
+                {x.name}{adoptReceive?(deliveryplanadoption.find(y=>y.module_id===x.module_id&&y.provide_id===x.provide_id)===undefined)?' <不採用>':' <採用>':''}</option>)}
             </select>
           </div>
         </li>:null}
@@ -280,13 +284,13 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
             </li>
             <li>
               {allVehicleMode?
-                <div><span>車両(vehicle_id)一覧</span>
-                  {vehicle_id_list.map((x,i)=><p><span style={{color:rgbStrChg(route_line_color[i])}}>◆</span>&nbsp;{x}</p>)}
+                <div><span>車両ID一覧</span>
+                  {vehicle_id_list.map((x,i)=><p><span style={{color:rgbStrChg(route_line_color[i%route_line_color.length])}}>◆</span>&nbsp;車両&nbsp;{x}</p>)}
                 </div>:
-                <div className="form-select" title='車両(vehicle_id)選択'>
-                  <label htmlFor="VehicleIdSelect" className="form-select-label">車両(vehicle_id)選択</label>
+                <div className="form-select" title='車両ID選択'>
+                  <label htmlFor="VehicleIdSelect" className="form-select-label">車両ID選択</label>
                   <select id="VehicleIdSelect" value={vehicle_id} onChange={getVehicleIdSelected} >
-                  {vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                  {vehicle_id_list.map(x=><option value={x} key={x}>{`車両 ${x}`}</option>)}
                   </select>
                 </div>
               }
@@ -321,14 +325,17 @@ class PlanMode extends React.Component<ControllerProps, {}> {
   }
 
   render () {
-    const { plan_index, plan_list, getplanSelected, allVehicleMode, onChangeAllVehicleMode} = this.props
+    const { plan_index, plan_list, getplanSelected, allVehicleMode, onChangeAllVehicleMode, deliveryplanadoption} = this.props
     
+    const adoptReceive = deliveryplanadoption.length > 0
     const list:any[] = plan_list.map((x,index)=>{
-      const colorstr = rgbStrChg(route_line_color[index])
+      const adoption = deliveryplanadoption.find(y=>y.module_id === x.module_id && y.provide_id === x.provide_id)
+      const colorstr = rgbStrChg(route_line_color[index%route_line_color.length])
       return {
         value:index,
-        caption:<><span style={{color:colorstr}}>◆</span>&nbsp;{x.name}</>,
-        defaultChecked:(plan_index===index)
+        caption:<><span style={{color:colorstr}}>◆</span>&nbsp;{x.name}{adoptReceive?adoption===undefined?' <不採用>':' <採用>':''}</>,
+        checked:(plan_index===index),
+        disabled:(adoptReceive&&adoption===undefined)
       }
     })
     const RadioButtonProps = {
@@ -337,7 +344,7 @@ class PlanMode extends React.Component<ControllerProps, {}> {
 
     return (<>
       {plan_list.length > 0?<>
-        <li><span>プラン選択</span>
+        <li><span>運行データ</span>
           <RadioButtons {...RadioButtonProps} />
         </li>
         <li>

@@ -3,6 +3,7 @@ import { SocketMessage } from '../constants/workerMessageTypes';
 const socket = io();
 
 var wcounter = 0
+let mapbox_token = ''
 console.log("Worker working!")
 
 socket.on('disconnect', () => { console.log('Socket.IO disconnected!') })
@@ -20,7 +21,7 @@ const getToken = () => {
 socket.on('connect', () => {
     console.log('Socket.IO connected!')
     worker.postMessage({ type: 'CONNECTED'} as SocketMessage<void>);
-    setTimeout(getToken, 1500) // 500msec after send get=mapbox-token
+    setTimeout(getToken, 1000) // 1000msec after send get=mapbox-token
 })
 
 socket.on('mapbox_token', (payload: string) => {
@@ -31,7 +32,7 @@ socket.on('mapbox_token', (payload: string) => {
     } as SocketMessage<string> );
     // this
     if (wcounter === 0){
-        setTimeout(startRecivedData, 500) // 500msec after send get=mapbox-token
+        setTimeout(startRecivedData, 1000) // 1000msec after send get=mapbox-token
         wcounter ++   // assign only once.
     }
 })
@@ -175,7 +176,7 @@ function startRecivedData() {
         } as SocketMessage<any> );
     })
 
-    setTimeout(getSaveDataTransmissionRequest, 5000)
+    setTimeout(getSaveDataTransmissionRequest, 4000)
 }
 
 const getSaveDataTransmissionRequest = () => {

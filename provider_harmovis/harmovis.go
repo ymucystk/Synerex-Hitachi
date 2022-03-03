@@ -456,6 +456,8 @@ func demandDpCallback(clt *synerexsxutil.SXServiceClient, sp *synerexapi.Demand)
 		if err == nil && work.EventId == 1 {
 			DeliveryPlanningRequest = work
 			DeliveryPlanningProvide = nil
+			DeliveryPlanAdoption = nil
+			VehicleList = nil
 			jsonBytes, _ := json.Marshal(work)
 			log.Printf("DeliveryPlanningRequest: %v", string(jsonBytes))
 			mu.Lock()

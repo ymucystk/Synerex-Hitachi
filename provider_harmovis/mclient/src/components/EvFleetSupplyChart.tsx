@@ -77,15 +77,16 @@ class _EvFleetSupplyChart extends React.Component<Props> {
             <table>
               <tr>
                 <td style={{width:'50%', margin:'5px 0px'}}>
-                <div className="form-select" title='車両(vehicle_id)選択'>
-                  <label htmlFor="EvVehicleIdSelected" className="form-select-label">車両(vehicle_id)選択</label>
+                <div className="form-select" title='車両ID選択'>
+                  <label htmlFor="EvVehicleIdSelected" className="form-select-label">車両ID選択</label>
                   <select id="EvVehicleIdSelected" value={ev_vehicle_id} onChange={getEvVehicleIdSelected} >
-                  {ev_vehicle_id_list.map(x=><option value={x} key={x}>{x}</option>)}
+                  {ev_vehicle_id_list.map(x=><option value={x} key={x}>{`車両 ${x}`}</option>)}
                   </select>
                 </div>
-                <p>エアコン(air_conditioner)&nbsp;:&nbsp;{dspData.air_conditioner >= 1 ? '使用(use)':'未使用(not use)'}</p>
-                <p>バッテリー充電率(soc)&nbsp;:&nbsp;{dspData.soc}&nbsp;%</p>
-                <p>バッテリー劣化率(soh)&nbsp;:&nbsp;{dspData.soh}&nbsp;%</p>
+                {/*<p>エアコン(air_conditioner)&nbsp;:&nbsp;{dspData.air_conditioner >= 1 ? '使用(use)':'未使用(not use)'}</p>*/}
+                <p>車両位置&nbsp;:&nbsp;{`${dspData.latitude},${dspData.longitude}`}&nbsp;%</p>
+                <p>SoC&nbsp;:&nbsp;{dspData.soc}&nbsp;%</p>
+                <p>SoH&nbsp;:&nbsp;{dspData.soh}&nbsp;%</p>
                 </td>
                 <td style={{width:'50%'}}>
                 <Chart width={width} height={height} data={gaugedata} options={setOptions} chartType="Gauge" />
