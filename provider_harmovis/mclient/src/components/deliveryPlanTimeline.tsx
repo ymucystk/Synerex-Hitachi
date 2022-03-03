@@ -177,7 +177,7 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
             ])
           }else{
             timelineData.push([
-              `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}-補`,
+              `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}-充`,
               `充 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
               start_time, end_time
             ])

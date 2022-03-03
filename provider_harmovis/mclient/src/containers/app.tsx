@@ -1578,8 +1578,7 @@ class App extends Container<any,Partial<State>> {
 					for (const {longitude,latitude} of route_info){
 						path.push([longitude, latitude, 10])
 					}
-					const findPlan = this.plan_list.findIndex(x=>x.module_id===module_id && x.provide_id===provide_id)
-					const module_color = route_line_color[(findPlan%route_line_color.length)]
+					const module_color = route_line_color[(findIndex%route_line_color.length)]
 					data.push({path:path, vehicle_id, delivery_plan_id, charging_plans, message:"VehicleRouteLayer"})
 					layers.push( new PathLayer({
 						id: 'VehicleRouteLayer',
