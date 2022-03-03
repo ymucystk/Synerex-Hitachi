@@ -1480,7 +1480,7 @@ class App extends Container<any,Partial<State>> {
 								const data:PathData[] = []
 								const path:number[][] = []
 								for (const {longitude,latitude} of route_info){
-									path.push([longitude, latitude, 10])
+									path.push([longitude, latitude, (this.plan_index===i?100:10)])
 								}
 								data.push({path:path, vehicle_id:va_vehicle_id, delivery_plan_id:va_delivery_plan_id,
 									charging_plans, message:"VehicleRouteLayer"})
@@ -1616,7 +1616,7 @@ class App extends Container<any,Partial<State>> {
 											position:[longitude, latitude],
 											delivery_time: delivery_time_table[delivery_time],
 											estimated_time_of_arrival: editCaption(delivery_packages_info.estimated_time_of_arrival),
-											color: delivery_time_color[delivery_time],
+											color: module_color,
 											message: 'DeliveryPlanningRequest',
 											text
 										})
@@ -1668,7 +1668,7 @@ class App extends Container<any,Partial<State>> {
 						const data:PathData[] = []
 						const path:number[][] = []
 						for (const {longitude,latitude} of route_info){
-							path.push([longitude, latitude, 10])
+							path.push([longitude, latitude, (vehicle_id===_vehicle_id?100:10)])
 						}
 						const module_color = route_line_color[i%route_line_color.length]
 						data.push({path:path, vehicle_id:_vehicle_id, delivery_plan_id:_delivery_plan_id,
@@ -1677,7 +1677,7 @@ class App extends Container<any,Partial<State>> {
 							id: `VehicleRouteLayer-${i}`,
 							data,
 							visible:true,
-							opacity: adoption === undefined ? 0.7 : 1.0,
+							opacity: (adoption === undefined ? 0.7 : 1.0),
 							pickable:true,
 							widthUnits: 'meters',
 							widthMinPixels: 1,
@@ -1685,7 +1685,7 @@ class App extends Container<any,Partial<State>> {
 							jointRounded: true,
 							getPath: (x:PathData) => x.path,
 							getColor: (x:PathData) => x.color || module_color,
-							getWidth: (x:PathData) => x.width || (adoption === undefined ? 7 : 14),
+							getWidth: (x:PathData) => x.width || (adoption === undefined ? 7 : 14)*(x.vehicle_id===vehicle_id?3:1),
 							onHover,
 							onClick,
 							getDashArray: adoption === undefined ? [5,5] : [0,0],

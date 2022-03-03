@@ -247,6 +247,20 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
       charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected, allVehicleMode, onChangeAllVehicleMode } = this.props
 
     const adoptReceive = deliveryplanadoption.length > 0
+
+    const list:any[] = vehicle_id_list.map((x,index)=>{
+      const colorstr = rgbStrChg(route_line_color[index%route_line_color.length])
+      return {
+        value:x,
+        caption:<><span style={{color:colorstr}}>◆</span>&nbsp;{`車両 ${x}`}</>,
+        checked:(vehicle_id===x),
+        disabled:false
+      }
+    })
+    const RadioButtonProps = {
+      name:'VehicleIds', list, onChange:getVehicleIdSelected
+    }
+
     return (<>
         {plan_list.length > 0?
         <li>
@@ -285,7 +299,7 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
             <li>
               {allVehicleMode?
                 <div><span>車両ID一覧</span>
-                  {vehicle_id_list.map((x,i)=><p><span style={{color:rgbStrChg(route_line_color[i%route_line_color.length])}}>◆</span>&nbsp;車両&nbsp;{x}</p>)}
+                  <RadioButtons {...RadioButtonProps} />
                 </div>:
                 <div className="form-select" title='車両ID選択'>
                   <label htmlFor="VehicleIdSelect" className="form-select-label">車両ID選択</label>
