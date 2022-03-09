@@ -9,8 +9,8 @@ import OsmInput from './xml-input'
 import MovesInput from './moves-input'
 import ChartComponent from './chartComponent'
 import RadioButtons from './radiobuttons'
-import {route_line_color,rgbStrChg} from '../containers/app'
-import { DeliveryPlanningRequest, DeliveryPlanningProvide, DeliveryPlanAdoption, PlanList } from '../@types'
+import { route_line_color, rgbStrChg, Deliveryplanningrequest, Deliveryplanningprovide, Deliveryplanadoption } from '../library'
+import { DeliveryPlanningProvide, PlanList } from '../@types'
 
 const stringToDate = (strDate:string)=>{
   if(strDate.length === 14){
@@ -58,17 +58,11 @@ interface ControllerProps {
   getProvideIdSelected: any, 
   getVehicleIdSelected: any,
   vehicle_id_list: number[],
-  delivery_plan_id: number,
-  charging_plan_id: number,
-  delivery_plan_id_list: number[],
-  charging_plan_id_list: number[],
-  getDeliveryPlanIdSelected: any,
-  getChargingPlanIdSelected: any,
   allVehicleMode: boolean,
   onChangeAllVehicleMode: any,
-  deliveryplanningrequest: DeliveryPlanningRequest,
-  deliveryplanningprovide: DeliveryPlanningProvide[],
-  deliveryplanadoption: DeliveryPlanAdoption[]
+  deliveryplanningrequest: Deliveryplanningrequest,
+  deliveryplanningprovide: Deliveryplanningprovide,
+  deliveryplanadoption: Deliveryplanadoption
 }
 
 export default class Controller extends React.Component<ControllerProps, {}> {
@@ -97,13 +91,14 @@ export default class Controller extends React.Component<ControllerProps, {}> {
     const { settime, timeBegin, leading, timeLength, actions, secperhour, animatePause, animateReverse, vehicle_id_list,
       plan_index, plan_list, getMoveDataChecked, getMoveOptionChecked, display_mode, display_mode_list, getDisplayModeSelected,
       inputFileName, viewport, getOsmData, chartData,
-      deliveryplanningrequest, deliveryplanningprovide:deliveryplanningprovideList, deliveryplanadoption } = this.props
+      deliveryplanningrequest, deliveryplanadoption } = this.props
 
     const { movesFileName, osmDataFileName } = inputFileName
-    const { module_id, provide_id } = plan_list.length > 0?plan_list[plan_index]:{ module_id:undefined, provide_id:undefined }
+    const { module_id, provide_id }:PlanList = plan_list.length > 0?plan_list[plan_index]:{ module_id:undefined, provide_id:undefined }as PlanList
     const module_id_list = plan_list.map(x=>x.module_id)
     const provide_id_list = plan_list.map(x=>x.provide_id)
-    const deliveryplanningprovide = deliveryplanningprovideList.find((x=>x.module_id === module_id && x.provide_id === provide_id))
+    const charging_plan = this.props.deliveryplanningprovide.charging_plan(module_id,provide_id)
+    const { target_info, delivery_info, packages_info } = deliveryplanningrequest
 
     return (<>
       <div className='harmovis_controller'>
@@ -200,22 +195,22 @@ export default class Controller extends React.Component<ControllerProps, {}> {
                 </button>
               </div>
             </li>:null}
-            {deliveryplanningrequest && deliveryplanningrequest.target_info ?<>
+            {target_info ?<>
             <li>
-              <p>最大車両:&nbsp;{deliveryplanningrequest.target_info.max_vehicle_unit}</p>
-              <p>配送開始:&nbsp;{stringToDate(deliveryplanningrequest.target_info.start_delivery_time)}</p>
-              <p>配送終了:&nbsp;{stringToDate(deliveryplanningrequest.target_info.end_delivery_time)}</p>
-              {deliveryplanningrequest && deliveryplanningrequest.delivery_info ?<>
-                <p>配送ID:&nbsp;{deliveryplanningrequest.delivery_info.delivery_id}</p>
-                <p>配送パッケージ数:&nbsp;{deliveryplanningrequest.delivery_info.packages_info.length}</p>
+              <p>最大車両:&nbsp;{target_info.max_vehicle_unit}</p>
+              <p>配送開始:&nbsp;{stringToDate(target_info.start_delivery_time)}</p>
+              <p>配送終了:&nbsp;{stringToDate(target_info.end_delivery_time)}</p>
+              {delivery_info ?<>
+                <p>配送ID:&nbsp;{delivery_info.delivery_id}</p>
+                <p>配送パッケージ数:&nbsp;{packages_info.length}</p>
               </>:null}
-              {plan_list.length > 0 && deliveryplanningprovide !== undefined ?<>
+              {plan_list.length > 0 && charging_plan !== undefined ?<>
                 <p>{plan_list[plan_index].name}&nbsp;車両台数:&nbsp;{vehicle_id_list.length}</p>
                 <p>{plan_list[plan_index].name}&nbsp;充電器数:&nbsp;
-                  {Array.from(new Set(deliveryplanningprovide.charging_plan.map(x=>`${x.charging_station_id}${x.charger_id}`))).length}</p>
+                  {Array.from(new Set(charging_plan.map(x=>`${x.charging_station_id}${x.charger_id}`))).length}</p>
               </>:null}
               {plan_list.length > 0 && module_id_list.length > 0 && provide_id_list.length > 0?<>
-                <p>{plan_list[plan_index].name}&nbsp;採用状況:&nbsp;{deliveryplanadoption.findIndex(x=>x.module_id === module_id && x.provide_id === provide_id) < 0?'未採用':'採用'}</p>
+                <p>{plan_list[plan_index].name}&nbsp;採用状況:&nbsp;{deliveryplanadoption.adoption(module_id,provide_id)?'採用':'未採用'}</p>
               </>:null}
             </li>
             </>:null}
@@ -244,9 +239,9 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
 
   render () {
     const { plan_index, plan_list, getplanSelected, vehicle_id, vehicle_id_list, getVehicleIdSelected, deliveryplanadoption,
-      charging_plan_id, charging_plan_id_list, getChargingPlanIdSelected, allVehicleMode, onChangeAllVehicleMode } = this.props
+      allVehicleMode, onChangeAllVehicleMode } = this.props
 
-    const adoptReceive = deliveryplanadoption.length > 0
+    const adoptReceive = deliveryplanadoption.adoptReceive()
 
     const list:any[] = vehicle_id_list.map((x,index)=>{
       const colorstr = rgbStrChg(route_line_color[index%route_line_color.length])
@@ -268,8 +263,8 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
             <label htmlFor="planSelected" className="form-select-label">運行データ</label>
             <select id="planSelected" value={plan_index} onChange={getplanSelected} >
             {plan_list.map(x=><option value={x.index} key={x.index}
-              disabled={adoptReceive&&(deliveryplanadoption.find(y=>y.module_id===x.module_id&&y.provide_id===x.provide_id)===undefined)}>
-                {x.name}{adoptReceive?(deliveryplanadoption.find(y=>y.module_id===x.module_id&&y.provide_id===x.provide_id)===undefined)?' <不採用>':' <採用>':''}</option>)}
+              disabled={adoptReceive&&(!deliveryplanadoption.adoption(x.module_id,x.provide_id))}>
+                {x.name}{adoptReceive?(!deliveryplanadoption.adoption(x.module_id,x.provide_id))?' <不採用>':' <採用>':''}</option>)}
             </select>
           </div>
         </li>:null}
@@ -310,24 +305,6 @@ class VehicleMode extends React.Component<ControllerProps, {}> {
               }
             </li>
           </>:null}
-        {/*{delivery_plan_id_list.length > 0?
-        <li>
-          <div className="form-select" title='配送計画ID(delivery_plan_id)選択'>
-            <label htmlFor="deliveryPlanIdSelect" className="form-select-label">配送計画ID(delivery_plan_id)選択</label>
-            <select id="deliveryPlanIdSelect" value={delivery_plan_id} onChange={getDeliveryPlanIdSelected} >
-            {delivery_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-            </select>
-          </div>
-        </li>:null}*/}
-        {/*{charging_plan_id_list.length > 0?
-        <li>
-          <div className="form-select" title='充電計画ID(charging_plan_id)選択'>
-            <label htmlFor="chargingPlanIdSelect" className="form-select-label">充電計画ID(charging_plan_id)選択</label>
-            <select id="chargingPlanIdSelect" value={charging_plan_id} onChange={getChargingPlanIdSelected} >
-            {charging_plan_id_list.map(x=><option value={x} key={x}>{x}</option>)}
-            </select>
-          </div>
-        </li>:null}*/}
       </>
     )
   }
@@ -341,15 +318,15 @@ class PlanMode extends React.Component<ControllerProps, {}> {
   render () {
     const { plan_index, plan_list, getplanSelected, allVehicleMode, onChangeAllVehicleMode, deliveryplanadoption} = this.props
     
-    const adoptReceive = deliveryplanadoption.length > 0
+    const adoptReceive = deliveryplanadoption.adoptReceive()
     const list:any[] = plan_list.map((x,index)=>{
-      const adoption = deliveryplanadoption.find(y=>y.module_id === x.module_id && y.provide_id === x.provide_id)
+      const adoption = deliveryplanadoption.adoption(x.module_id,x.provide_id)
       const colorstr = rgbStrChg(route_line_color[index%route_line_color.length])
       return {
         value:index,
-        caption:<><span style={{color:colorstr}}>◆</span>&nbsp;{x.name}{adoptReceive?adoption===undefined?' <不採用>':' <採用>':''}</>,
+        caption:<><span style={{color:colorstr}}>◆</span>&nbsp;{x.name}{adoptReceive?!adoption?' <不採用>':' <採用>':''}</>,
         checked:(plan_index===index),
-        disabled:(adoptReceive&&adoption===undefined)
+        disabled:(adoptReceive&&!adoption)
       }
     })
     const RadioButtonProps = {

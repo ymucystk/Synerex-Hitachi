@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Chart from "react-google-charts";
-import { route_line_color, rgbStrChg } from '../containers/app'
-import { PlanList, DeliveryPlanningRequest, DeliveryPlanningProvide, DeliveryPlanAdoption, PackagePlan, ChargingPlan } from '../@types'
+import { route_line_color, rgbStrChg, Deliveryplanningrequest, Deliveryplanningprovide, Deliveryplanadoption } from '../library'
+import { PlanList, DeliveryPlanningProvide, PackagePlan, ChargingPlan } from '../@types'
 import { access } from 'fs';
 
 interface Props {
@@ -10,9 +10,9 @@ interface Props {
   plan_list: PlanList[],
   vehicle_id: number,
   vehicle_id_list: number[],
-  deliveryplanningrequest: DeliveryPlanningRequest,
-  deliveryplanningprovide: DeliveryPlanningProvide[],
-  deliveryplanadoption: DeliveryPlanAdoption[],
+  deliveryplanningrequest: Deliveryplanningrequest,
+  deliveryplanningprovide: Deliveryplanningprovide,
+  deliveryplanadoption: Deliveryplanadoption,
   getVehicleIdSelected: any,
   allVehicleMode:boolean,
   onChangeAllVehicleMode: any,
@@ -26,11 +26,11 @@ export class DeliveryPlanTimeline extends React.Component<Props> {
   render() {
     if(this.props.plan_list.length > 0){
       if(this.props.display_mode === 'plan'){
-        const {deliveryplanadoption:dpad} = this.props
-        const adoptReceive = dpad.length > 0
+        const {deliveryplanadoption} = this.props
+        const adoptReceive = deliveryplanadoption.adoptReceive()
         return (<li><table>{
           this.props.plan_list.map((x,idx)=>{
-            if(adoptReceive&&(dpad.find(y=>y.module_id===x.module_id&&y.provide_id===x.provide_id)===undefined)){
+            if(adoptReceive&&(!deliveryplanadoption.adoption(x.module_id,x.provide_id))){
               return null;
             }else{
               return (<_DeliveryPlanTimeline {...{...this.props,plan_index:idx}} />);
@@ -96,11 +96,12 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
 	}
 
   render() {
-    const {display_mode,plan_index,plan_list,vehicle_id,
-      allVehicleMode, onChangeAllVehicleMode,
+    const {display_mode,plan_index,plan_list,vehicle_id, allVehicleMode, onChangeAllVehicleMode,
       deliveryplanningrequest,deliveryplanningprovide,width,height,columnDef,rows,options} = this.props
     const {module_id,provide_id} = plan_list[plan_index]
-    const {delivery_plan,charging_plan,Vehicle_assignate} = deliveryplanningprovide.find(x=>x.module_id===module_id && x.provide_id===provide_id)
+    const delivery_plan = deliveryplanningprovide.delivery_plan(module_id,provide_id)
+    const charging_plan = deliveryplanningprovide.charging_plan(module_id,provide_id)
+    const Vehicle_assignate = deliveryplanningprovide.Vehicle_assignate(module_id,provide_id)
     if(Vehicle_assignate===undefined){
       return (null);
     }
@@ -126,27 +127,19 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
       allVehicle.push(dsp_vehicle_id)
     }
 
-    const timelineData:[string,string,Date,Date][] = []
+    let timelineData:[string,string,Date,Date][] = []
 
     const info = {delivery_id:0,NumberOfPackages:0,DeliveryPeriod:'',charger_count:0}
-    if(deliveryplanningrequest !== undefined && deliveryplanningrequest.delivery_info &&
-      deliveryplanningrequest.delivery_info.packages_info &&deliveryplanningrequest.delivery_info.packages_info.length > 0){
-      info.delivery_id = deliveryplanningrequest.delivery_info.delivery_id
-    }
-    if(deliveryplanningrequest !== undefined && deliveryplanningrequest.target_info &&
-      deliveryplanningrequest.target_info.start_delivery_time && deliveryplanningrequest.target_info.end_delivery_time){
-      const { start_delivery_time,end_delivery_time } = deliveryplanningrequest.target_info
-      info.DeliveryPeriod = editCaption(start_delivery_time,end_delivery_time)
-      timelineData.push([
-        `配送仕様`,info.DeliveryPeriod,
-        stringToDate(start_delivery_time), stringToDate(end_delivery_time)
-      ])
+    const { target_info, delivery_info, packages_info } = deliveryplanningrequest
+    if(delivery_info && packages_info.length > 0){
+      info.delivery_id = delivery_info.delivery_id
     }
     if(delivery_plan !== undefined){
       info.NumberOfPackages = delivery_plan.reduce((acc,x)=>(acc + x.packages_plan.length),0)
     }
 
     for(const for_vehicle_id of allVehicle){
+      const timelineDataVehicle:typeof timelineData = []
       const va_find_data = Vehicle_assignate.find(x=>x.vehicle_id===for_vehicle_id)
       const dsp_delivery_plan_id = va_find_data.delivery_plan_id
       const dsp_charging_plan_id_list = va_find_data.charging_plans.map(x=>x.charging_plan_id)
@@ -155,10 +148,10 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
    
       const time_list:[Date,string][] = dsp_packages_info_list.map(x=>[stringToDate(x.estimated_time_of_arrival),x.estimated_time_of_arrival])
       time_list.sort((a,b) => a[0]>b[0]?1:a[0]<b[0]?-1:0)
+      const delivery_start_time = time_list[0][0]
+      const delivery_end_time = time_list[time_list.length-1][0]
       for(const cg_plan_id of dsp_charging_plan_id_list){
-        const delivery_start_time = time_list[0][0]
-        const delivery_end_time = time_list[time_list.length-1][0]
-        timelineData.push([
+        timelineDataVehicle.push([
           `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
           //`配送作業時間 : ${time_list[0][1].substring(8,12)}～${time_list[time_list.length-1][1].substring(8,12)}`,
           `作業時間`,
@@ -170,13 +163,13 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
           const end_time = stringToDate(charging_plan.end_time)
           if((start_time < delivery_start_time && end_time <= delivery_start_time) ||
             (delivery_end_time <= start_time && delivery_end_time < end_time)){
-            timelineData.push([
+            timelineDataVehicle.push([
               `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
               `充 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
               start_time, end_time
             ])
           }else{
-            timelineData.push([
+            timelineDataVehicle.push([
               `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}-充`,
               `充 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
               start_time, end_time
@@ -184,6 +177,15 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
           }
         }
       }
+      timelineData = timelineData.concat(timelineDataVehicle)
+    }
+    if(target_info && target_info.start_delivery_time && target_info.end_delivery_time){
+      const { start_delivery_time,end_delivery_time } = target_info
+      info.DeliveryPeriod = editCaption(start_delivery_time,end_delivery_time)
+      timelineData.unshift([
+        `配送仕様`,info.DeliveryPeriod,
+        stringToDate(start_delivery_time), stringToDate(end_delivery_time)
+      ])
     }
     info.charger_count = Array.from(new Set(charging_plan.map(x=>`${x.charging_station_id}${x.charger_id}`))).length
 

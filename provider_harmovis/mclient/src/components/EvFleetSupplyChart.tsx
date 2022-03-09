@@ -36,16 +36,8 @@ class _EvFleetSupplyChart extends React.Component<Props> {
   }
 
   render() {
-    const {width,height,ev_vehicle_id,ev_vehicle_id_list,getEvVehicleIdSelected,
-      evfleetsupply:_evfleetsupply,options,vehiclelist} = this.props
-    const evfleetsupply = _evfleetsupply.map(x=>{return {...x}})
-    let dspData:EvFleetSupply = undefined
-    for (let i = 0, lengthi = evfleetsupply.length; i < lengthi; i=(i+1)|0) {
-        if(ev_vehicle_id === evfleetsupply[i].vehicle_id){
-            dspData = evfleetsupply[i]
-            break
-        }
-    }
+    const {width,height,ev_vehicle_id,ev_vehicle_id_list,getEvVehicleIdSelected,options,vehiclelist} = this.props
+    const dspData:EvFleetSupply = {...this.props.evfleetsupply.find(x=>x.vehicle_id===ev_vehicle_id)}
     if(dspData !== undefined){
       if(vehiclelist!==undefined){
         const vehicle_list = vehiclelist.vehicle_list.find((x)=>x.vehicle_id===dspData.vehicle_id)
@@ -74,8 +66,8 @@ class _EvFleetSupplyChart extends React.Component<Props> {
       const setOptions = Object.assign({},default_options,options)
       return (
           <div style={default_style}>
-            <table>
-              <tr>
+            <table style={{width:'100%'}}>
+              <tr style={{width:'100%'}}>
                 <td style={{width:'50%', margin:'5px 0px'}}>
                 <div className="form-select" title='車両ID選択'>
                   <label htmlFor="EvVehicleIdSelected" className="form-select-label">車両ID選択</label>
@@ -84,9 +76,10 @@ class _EvFleetSupplyChart extends React.Component<Props> {
                   </select>
                 </div>
                 {/*<p>エアコン(air_conditioner)&nbsp;:&nbsp;{dspData.air_conditioner >= 1 ? '使用(use)':'未使用(not use)'}</p>*/}
-                <p>車両位置&nbsp;:&nbsp;{`${dspData.latitude},${dspData.longitude}`}&nbsp;%</p>
-                <p>SoC&nbsp;:&nbsp;{dspData.soc}&nbsp;%</p>
-                <p>SoH&nbsp;:&nbsp;{dspData.soh}&nbsp;%</p>
+                <p>{`車両位置`}</p>
+                <p>{`緯度: ${dspData.latitude}`}</p>
+                <p>{`経度: ${dspData.longitude}`}</p>
+                <p>{`SoC: ${dspData.soc} %   SoH: ${dspData.soh} %`}</p>
                 </td>
                 <td style={{width:'50%'}}>
                 <Chart width={width} height={height} data={gaugedata} options={setOptions} chartType="Gauge" />
