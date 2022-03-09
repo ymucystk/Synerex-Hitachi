@@ -142,9 +142,9 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
       const timelineDataVehicle:typeof timelineData = []
       const va_find_data = Vehicle_assignate.find(x=>x.vehicle_id===for_vehicle_id)
       const dsp_delivery_plan_id = va_find_data.delivery_plan_id
-      const dsp_charging_plan_id_list = va_find_data.charging_plans.map(x=>x.charging_plan_id)
-      const dp_find_data = delivery_plan.find(x=>x.delivery_plan_id===dsp_delivery_plan_id)
-      const dsp_packages_info_list = dp_find_data.packages_plan.map(x=>x)
+      const dsp_charging_plan_id_list = deliveryplanningprovide.charging_plan_id_list(module_id,provide_id,for_vehicle_id)
+      const packages_plan = deliveryplanningprovide.packages_plan(module_id,provide_id,for_vehicle_id)
+      const dsp_packages_info_list = packages_plan.map(x=>x)
    
       const time_list:[Date,string][] = dsp_packages_info_list.map(x=>[stringToDate(x.estimated_time_of_arrival),x.estimated_time_of_arrival])
       time_list.sort((a,b) => a[0]>b[0]?1:a[0]<b[0]?-1:0)
