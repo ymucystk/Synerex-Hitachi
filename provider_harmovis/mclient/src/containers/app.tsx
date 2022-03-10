@@ -1185,38 +1185,33 @@ class App extends Container<any,Partial<State>> {
 				} as any)
 			)
 		}
-		if (this.evfleetroute.length > 0) {
-			for(const vehicle_id of this.vehicle_id_list){
-				const target = this.evfleetroute.find((x)=>x.vehicle_id === vehicle_id)
-				if(target !== undefined){
-					const line_data = target.line_data
-					const filterdata = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
-					if (filterdata.length > 0) {
-						const data = filterdata.map(x=>{
-							let {soc,soh} = x
-							if(soc === undefined || soh === undefined){
-								const vehicle_list = this.vehiclelist.vehicle_list(this.module_id,this.provide_id,vehicle_id)
-								soc = soc === undefined ? vehicle_list.soc === undefined ? 0 : vehicle_list.soc : soc
-								soh = soh === undefined ? vehicle_list.soh === undefined ? 0 : vehicle_list.soh : soh
-							}
-							return{...x,soc,soh} 
-						})
-						layers.push(
-							new LineLayer({
-								id: 'evfleetroute-LineLayer-' + vehicle_id,
-								data,
-								pickable: true,
-								widthUnits: 'meters',
-								widthMinPixels: 1,
-								getSourcePosition: (x: any) => x.sourcePosition,
-								getTargetPosition: (x: any) => x.targetPosition,
-								getColor: (x: any) => ratecolor(x.soc),
-								getWidth: (x:any) => x.soh ? ((100 - x.soh)/10) : 1,
-								opacity: 0.8
-							  })
-						)
+		for(const evfleetroute of this.evfleetroute){
+			const {vehicle_id,line_data} = evfleetroute
+			const filterdata = line_data.filter((x)=>x.sourcePosition[0] !== x.targetPosition[0] && x.sourcePosition[1] !== x.targetPosition[1])
+			if (filterdata.length > 0) {
+				const data = filterdata.map(x=>{
+					let {soc,soh} = x
+					if(soc === undefined || soh === undefined){
+						const vehicle_list = this.vehiclelist.vehicle_list(this.module_id,this.provide_id,vehicle_id)
+						soc = soc === undefined ? vehicle_list.soc === undefined ? 0 : vehicle_list.soc : soc
+						soh = soh === undefined ? vehicle_list.soh === undefined ? 0 : vehicle_list.soh : soh
 					}
-				}
+					return{...x,soc,soh} 
+				})
+				layers.push(
+					new LineLayer({
+						id: 'evfleetroute-LineLayer-' + vehicle_id,
+						data,
+						pickable: true,
+						widthUnits: 'meters',
+						widthMinPixels: 1,
+						getSourcePosition: (x: any) => x.sourcePosition,
+						getTargetPosition: (x: any) => x.targetPosition,
+						getColor: (x: any) => ratecolor(x.soc),
+						getWidth: (x:any) => x.soh ? ((100 - x.soh)/10) : 1,
+						opacity: 0.8
+						})
+				)
 			}
 		}
 		const packages_info = this.deliveryplanningrequest.packages_info
