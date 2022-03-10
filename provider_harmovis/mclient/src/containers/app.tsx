@@ -1438,7 +1438,7 @@ class App extends Container<any,Partial<State>> {
 							getDashArray: !adoption ? [5,5] : [0,0],
 							extensions
 						} as any))
-						const packages_plan = this.deliveryplanningprovide.packages_plan(this.module_id,this.provide_id,this.vehicle_id)
+						const packages_plan = this.deliveryplanningprovide.packages_plan(this.module_id,this.provide_id,_vehicle_id)
 						const delivery_point_data:any[] = []
 						for (const delivery_packages_info of packages_plan){
 							const selectData = packages_info.filter(x=>x.package_id === delivery_packages_info.package_id)
