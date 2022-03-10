@@ -46,7 +46,7 @@ export class DeliveryPlanTimeline extends React.Component<Props> {
 }
 
 const default_style = { 'background': 'white', 'padding': '5px 10px 0px' };
-const default_options = { timeline:{ colorByRowLabel:false }, alternatingRowStyle:false }
+const default_options = { timeline:{ colorByRowLabel:false }, alternatingRowStyle:false, tooltip:{trigger:'focus'} }
 const stringToDate = (strDate:string)=>{
   if(strDate.length === 14){
     const year = parseInt(strDate.substring(0, 4))
@@ -137,6 +137,7 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
     if(delivery_plan !== undefined){
       info.NumberOfPackages = delivery_plan.reduce((acc,x)=>(acc + x.packages_plan.length),0)
     }
+    let overlap_counter = 0
 
     for(const for_vehicle_id of allVehicle){
       const timelineDataVehicle:typeof timelineData = []
@@ -158,24 +159,21 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
           delivery_start_time, delivery_end_time
         ])
         const dsp_charging_plan_list = charging_plan.filter(x=>x.vehicle_id===for_vehicle_id && x.charging_plan_id===cg_plan_id)
+        let overlap_flg = false
         for(const charging_plan of dsp_charging_plan_list){
           const start_time = stringToDate(charging_plan.start_time)
           const end_time = stringToDate(charging_plan.end_time)
-          if((start_time < delivery_start_time && end_time <= delivery_start_time) ||
-            (delivery_end_time <= start_time && delivery_end_time < end_time)){
-            timelineDataVehicle.push([
-              `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
-              `充 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
-              start_time, end_time
-            ])
-          }else{
-            timelineDataVehicle.push([
-              `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}-充`,
-              `充 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
-              start_time, end_time
-            ])
+          timelineDataVehicle.push([
+            `車-配-充ID : ${for_vehicle_id}-${dsp_delivery_plan_id}-${cg_plan_id}`,
+            `充 ${charging_plan.charging_station_id}-${charging_plan.charger_id}-${charging_plan.charging_type === 2 ? '急':'通'}`,
+            start_time, end_time
+          ])
+          if(!((start_time < delivery_start_time && end_time <= delivery_start_time) ||
+            (delivery_end_time <= start_time && delivery_end_time < end_time))){
+            overlap_flg = true
           }
         }
+        overlap_counter += overlap_flg?1:0
       }
       timelineData = timelineData.concat(timelineDataVehicle)
     }
@@ -196,9 +194,9 @@ class _DeliveryPlanTimeline extends React.Component<Props> {
         const result = wk.filter((element,index,self)=>{
           return self.indexOf(element) === index;
         })
-        setHeight = `${((result.length)*41)+50}px`
+        setHeight = `${((result.length)*41)+50+(overlap_counter*30)}px`
       }else{
-        setHeight = `${(rows*41)+50}px`
+        setHeight = `${(rows*41)+50+(overlap_counter*30)}px`
       }
     }else{
       setHeight = height
