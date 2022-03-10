@@ -112,6 +112,7 @@ func run_server() *gosocketio.Server {
 		if *mapbox != "" {
 			mapboxToken = *mapbox
 		}
+		time.Sleep(time.Millisecond * 100)
 		c.Emit("mapbox_token", mapboxToken)
 		log.Printf("mapbox-token transferred %s ", mapboxToken)
 	})
@@ -119,12 +120,14 @@ func run_server() *gosocketio.Server {
 	server.On("save_data_transmission_request", func(c *gosocketio.Channel) {
 		log.Printf("save_data_transmission_request")
 		if DeliveryPlanningRequest != nil {
+			time.Sleep(time.Millisecond * 100)
 			jsonBytes, _ := json.Marshal(DeliveryPlanningRequest)
 			c.Emit("deliveryplanningrequest", string(jsonBytes))
 			log.Printf("response DeliveryPlanningRequest")
 		}
 		{
 			for _, x := range VehicleList {
+				time.Sleep(time.Millisecond * 100)
 				jsonBytes, _ := json.Marshal(x)
 				c.Emit("vehiclelist", string(jsonBytes))
 				log.Printf("response VehicleList ModuleId:%d, ProvideId:%s", x.ModuleId, x.ProvideId)
@@ -132,6 +135,7 @@ func run_server() *gosocketio.Server {
 		}
 		{
 			for _, x := range DeliveryPlanningProvide {
+				time.Sleep(time.Millisecond * 100)
 				DeliveryPlanningProvide_1 := &dispatch.DeliveryPlanningProvide{
 					EventId:      x.EventId,
 					TimeStamp:    x.TimeStamp,
@@ -143,6 +147,7 @@ func run_server() *gosocketio.Server {
 				jsonBytes_1, _ := json.Marshal(DeliveryPlanningProvide_1)
 				c.Emit("deliveryplanningprovide", string(jsonBytes_1))
 
+				time.Sleep(time.Millisecond * 100)
 				DeliveryPlanningProvide_2 := &dispatch.DeliveryPlanningProvide{
 					EventId:          x.EventId,
 					ModuleId:         x.ModuleId,
@@ -156,6 +161,7 @@ func run_server() *gosocketio.Server {
 		}
 		{
 			for _, x := range DeliveryPlanAdoption {
+				time.Sleep(time.Millisecond * 100)
 				jsonBytes, _ := json.Marshal(x)
 				c.Emit("deliveryplanadoption", string(jsonBytes))
 				log.Printf("response DeliveryPlanAdoption ModuleId:%d, ProvideId:%s", x.ModuleId, x.ProvideId)
