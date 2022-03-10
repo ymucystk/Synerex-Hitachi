@@ -1198,6 +1198,7 @@ class App extends Container<any,Partial<State>> {
 					}
 					return{...x,soc,soh} 
 				})
+				const active = vehicle_id === this.ev_vehicle_id
 				layers.push(
 					new LineLayer({
 						id: 'evfleetroute-LineLayer-' + vehicle_id,
@@ -1205,8 +1206,8 @@ class App extends Container<any,Partial<State>> {
 						pickable: true,
 						widthUnits: 'meters',
 						widthMinPixels: 1,
-						getSourcePosition: (x: any) => x.sourcePosition,
-						getTargetPosition: (x: any) => x.targetPosition,
+						getSourcePosition: (x: any) => [x.sourcePosition[0],x.sourcePosition[1],(active?100:0)],
+						getTargetPosition: (x: any) => [x.targetPosition[0],x.targetPosition[1],(active?100:0)],
 						getColor: (x: any) => ratecolor(x.soc),
 						getWidth: (x:any) => x.soh ? ((100 - x.soh)/10) : 1,
 						opacity: 0.8
