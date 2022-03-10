@@ -954,6 +954,7 @@ class App extends Container<any,Partial<State>> {
 					}
 				}
 			}else{
+				const regex = /^delivery-point-text-layer.*/
 				if (el.layer && el.layer.id && el.layer.id === 'packages_info_ScatterplotLayer'){
 					const objctlist:[string, any][] = Object.entries(el.object);
 					for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
@@ -976,6 +977,9 @@ class App extends Container<any,Partial<State>> {
 							disptext = disptext + (`${name} : ${value}`);
 						}
 					}
+				}else
+				if(el.layer && el.layer.id && el.layer.id.match(regex)!==null){
+					console.log('delivery-point-text-layer')
 				}else{
 					const objctlist = Object.entries(el.object);
 					for (let i = 0, lengthi = objctlist.length; i < lengthi; i=(i+1)|0) {
@@ -1318,7 +1322,9 @@ class App extends Container<any,Partial<State>> {
 								getTextAnchor: 'end',
 								getSize: 13,
 								fontWeight: 80,
-								getPixelOffset: [-20,-30+(i*15)]
+								getPixelOffset: [-20,-30+(i*15)],
+								pickable: true,
+								onHover,
 							} as any)
 						)
 					}
@@ -1401,7 +1407,9 @@ class App extends Container<any,Partial<State>> {
 							getTextAnchor: 'end',
 							getSize: 13,
 							fontWeight: 80,
-							getPixelOffset: [-20,-30]
+							getPixelOffset: [-20,-30],
+							pickable: true,
+							onHover,
 						} as any)
 					)
 				}else
@@ -1480,7 +1488,9 @@ class App extends Container<any,Partial<State>> {
 								getTextAnchor: 'end',
 								getSize: 13,
 								fontWeight: 80,
-								getPixelOffset: [-20,-30]
+								getPixelOffset: [-20,-30],
+								pickable: true,
+								onHover,
 							} as any)
 						)
 					}
