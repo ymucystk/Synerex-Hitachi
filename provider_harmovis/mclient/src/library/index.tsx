@@ -233,7 +233,7 @@ export class Vehiclelist {
     }
     vehiclelist: VehicleList[]
     set(setData:VehicleList){
-        if(setData.event_id !== 7){
+        if(setData.event_id === 7){
             const {module_id,provide_id} = setData
             if(module_id&&provide_id){
                 let findIdx = this.vehiclelist.findIndex(x=>x.module_id===module_id&&x.provide_id===provide_id)
